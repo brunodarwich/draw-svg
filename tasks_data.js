@@ -5,8 +5,8 @@ window.__TASKS_DATA__ = {
     "version": "1.0.0",
     "last_updated": "2026-09-26",
     "metrics": {
-      "total_tasks": 6,
-      "completed_tasks": 6,
+      "total_tasks": 7,
+      "completed_tasks": 7,
       "progress_percentage": 100
     }
   },
@@ -121,6 +121,24 @@ window.__TASKS_DATA__ = {
         "Inspetor inicia recolhido e alterna entre Código SVG e Camadas",
         "Marca escolhida aplicada no cabeçalho e favicon; galeria usa dados reais do IndexedDB",
         "Build Vite aprovado e navegação testada em desktop e celular de 390 px sem erro de console"
+      ],
+      "audit_confirmed": true,
+      "created_at": "2026-09-26",
+      "completed_at": "2026-09-26"
+    },
+    {
+      "id": "TASK-007",
+      "title": "Borracha Vetorial por Área, Balde Inteligente, Selecionar Tudo e Hierarquia de Camadas",
+      "description": "Implementação da borracha com máscara SVG preservando o traço restante, balde de tinta com hit-testing geométrico via Path2D preservando contorno original, seleção de todos os elementos via Ctrl+A e botões dedicados de subir/descer com drag-and-drop corrigido.",
+      "status": "done",
+      "milestone": "m4_frontend_ui",
+      "tier": "tier2_fast",
+      "indicators": [
+        "Borracha apaga apenas o segmento por onde o usuário passa usando máscara SVG nativa",
+        "Balde de tinta preenche formas e traços fechando automaticamente sem alterar a cor do contorno",
+        "Atalho Ctrl+A e botão 'Sel. Tudo' destacam elementos e permitem mover ou deletar em conjunto",
+        "Botões subir/descer em cada camada e drag-and-drop reorganizam a ordem no DOM SVG em tempo real",
+        "Suíte de testes de geometria e serialização aprovada com 9/9 testes e build de produção validado"
       ],
       "audit_confirmed": true,
       "created_at": "2026-09-26",

@@ -470,6 +470,14 @@ select:focus-visible {
 .canvas-wrap.tool-fill svg {
   cursor: cell;
 }
+.canvas-wrap.tool-eraser svg {
+  cursor: crosshair;
+}
+.selected-element {
+  outline: 2px dashed #0ea5e9 !important;
+  outline-offset: 2px;
+  filter: drop-shadow(0 0 6px rgba(14, 165, 233, 0.5)) !important;
+}
 .empty-hint {
   position: absolute;
   inset: 0;

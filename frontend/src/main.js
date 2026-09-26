@@ -11,6 +11,7 @@ import {
   Download,
   Images,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Minus,
   Plus,
@@ -29,6 +30,7 @@ import {
   X,
   ImagePlus,
   Check,
+  CheckSquare,
   PanelLeft,
   ExternalLink,
   Trash,
@@ -58,6 +60,7 @@ const iconSet = {
   Download,
   Images,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Minus,
   Plus,
@@ -76,6 +79,7 @@ const iconSet = {
   X,
   ImagePlus,
   Check,
+  CheckSquare,
   PanelLeft,
   ExternalLink,
   Trash,
@@ -169,6 +173,7 @@ async function dbDel(id) {
   });
 }
 function serialize() {
+  const defsEl = $("#artboard-defs");
   return serializeSvg({
     width: s.w,
     height: s.h,
@@ -177,6 +182,11 @@ function serialize() {
       let g = $(`#${CSS.escape(id)}`);
       return g ? [...g.children].map((n) => n.outerHTML).join("") : "";
     },
+    getLayerMaskAttr: (id) => {
+      let g = $(`#${CSS.escape(id)}`);
+      return g ? g.getAttribute("mask") || "" : "";
+    },
+    defsHtml: defsEl ? defsEl.innerHTML : "",
     pretty: true,
   });
 }
@@ -232,14 +242,27 @@ function applySnapshot(xml) {
     $("#size-select").add(sizeOpt);
   }
   $("#size-select").value = sizeOpt.value;
+
+  const defsEl = $("#artboard-defs");
+  if (defsEl) {
+    defsEl.replaceChildren();
+    const srcDefs = r.querySelector("defs");
+    if (srcDefs) {
+      [...srcDefs.children].forEach((n) =>
+        defsEl.append(document.importNode(n, true)),
+      );
+    }
+  }
+
   layers = [...r.children]
-    .filter((n) => n.tagName.toLowerCase() === "g")
+    .filter((n) => n.tagName.toLowerCase() === "g" && n.id !== "layers-root")
     .map((g, i) => ({
       id: g.id || `layer-${i + 1}`,
       name: g.getAttribute("data-name") || `Camada ${i + 1}`,
       visible: g.getAttribute("style") !== "display:none",
       locked: g.getAttribute("data-locked") === "true",
       opacity: Number(g.getAttribute("opacity") ?? 1),
+      mask: g.getAttribute("mask") || "",
     }));
   if (!layers.length)
     layers = [
@@ -249,6 +272,7 @@ function applySnapshot(xml) {
         visible: true,
         locked: false,
         opacity: 1,
+        mask: "",
       },
     ];
   root.replaceChildren();
@@ -257,15 +281,102 @@ function applySnapshot(xml) {
       g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.id = l.id;
     g.setAttribute("opacity", l.opacity);
+    if (l.mask) g.setAttribute("mask", l.mask);
     if (!l.visible) g.style.display = "none";
     if (src)
       [...src.children].forEach((n) => g.append(document.importNode(n, true)));
     root.append(g);
   }
-  s.active = layers.at(-1).id;
+  if (!layers.some((x) => x.id === s.active)) {
+    s.active = layers.at(-1).id;
+  }
+  clearSelection();
   updateLayers();
   refreshCode();
   empty();
+}
+function ensureLayerMask(layerId) {
+  let defsEl = $("#artboard-defs");
+  if (!defsEl) {
+    defsEl = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defsEl.id = "artboard-defs";
+    svg.prepend(defsEl);
+  }
+  const maskId = `mask-${layerId}`;
+  let mask = defsEl.querySelector(`#${CSS.escape(maskId)}`);
+  if (!mask) {
+    mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
+    mask.id = maskId;
+    mask.setAttribute("maskUnits", "userSpaceOnUse");
+    mask.setAttribute("x", "0");
+    mask.setAttribute("y", "0");
+    mask.setAttribute("width", s.w);
+    mask.setAttribute("height", s.h);
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", "0");
+    rect.setAttribute("y", "0");
+    rect.setAttribute("width", "100%");
+    rect.setAttribute("height", "100%");
+    rect.setAttribute("fill", "white");
+    mask.append(rect);
+    defsEl.append(mask);
+  }
+  const g = $(`#${CSS.escape(layerId)}`);
+  if (g && !g.getAttribute("mask")) {
+    g.setAttribute("mask", `url(#${maskId})`);
+  }
+  const l = layers.find((x) => x.id === layerId);
+  if (l) l.mask = `url(#${maskId})`;
+  return mask;
+}
+function clearSelection() {
+  if (s.selection) {
+    if (s.selection.elements) {
+      s.selection.elements.forEach((el) =>
+        el.classList.remove("selected-element"),
+      );
+    }
+  }
+  s.selection = null;
+}
+function selectAll() {
+  clearSelection();
+  let l = layers.find((x) => x.id === s.active);
+  if (!l || l.locked || !l.visible) {
+    return toast("A camada ativa está bloqueada ou invisível.");
+  }
+  const g = $(`#${CSS.escape(s.active)}`);
+  const elements = g ? [...g.querySelectorAll("[data-draw-id]")] : [];
+  if (!elements.length) {
+    return toast("Nenhum elemento na camada ativa.");
+  }
+  tool("select");
+  elements.forEach((el) => el.classList.add("selected-element"));
+  s.selection = {
+    elements,
+    start: null,
+    originals: elements.map((el) => ({
+      el,
+      transform: el.getAttribute("transform") || "",
+    })),
+  };
+  toast(
+    `${elements.length} ${elements.length === 1 ? "elemento selecionado" : "elementos selecionados"} (Delete para apagar)`,
+  );
+}
+function applyColorToSelection(color) {
+  if (s.selection && s.selection.elements?.length) {
+    s.selection.elements.forEach((el) => {
+      if (el.getAttribute("fill") && el.getAttribute("fill") !== "none") {
+        el.setAttribute("fill", color);
+      } else {
+        el.setAttribute("stroke", color);
+      }
+    });
+    saveHistory();
+    refreshCode();
+  }
 }
 function updateLayers() {
   let host = $("#layer-list");
@@ -275,15 +386,17 @@ function updateLayers() {
     row.className = `layer-row ${l.id === s.active ? "selected" : ""}`;
     row.draggable = true;
     row.dataset.id = l.id;
-    row.innerHTML = `<i class="layer-grip" data-icon="grip-vertical"></i><div class="layer-name"><i data-icon="layers-3"></i><span title="Duplo clique para renomear">${esc(l.name)}</span></div><div class="layer-actions"><button data-action="visibility" class="${l.visible ? "enabled" : ""}" title="Visibilidade"><i data-icon="${l.visible ? "eye" : "eye-off"}"></i></button><button data-action="lock" class="${l.locked ? "enabled" : ""}" title="Bloquear camada"><i data-icon="${l.locked ? "lock" : "unlock"}"></i></button><button data-action="delete" title="Excluir camada"><i data-icon="trash"></i></button></div>`;
+    row.innerHTML = `<i class="layer-grip" data-icon="grip-vertical"></i><div class="layer-name"><i data-icon="layers-3"></i><span title="Duplo clique para renomear">${esc(l.name)}</span></div><div class="layer-actions"><button data-action="move-up" title="Mover para cima (frente)"><i data-icon="chevron-up"></i></button><button data-action="move-down" title="Mover para baixo (trás)"><i data-icon="chevron-down"></i></button><button data-action="visibility" class="${l.visible ? "enabled" : ""}" title="Visibilidade"><i data-icon="${l.visible ? "eye" : "eye-off"}"></i></button><button data-action="lock" class="${l.locked ? "enabled" : ""}" title="Bloquear camada"><i data-icon="${l.locked ? "lock" : "unlock"}"></i></button><button data-action="delete" title="Excluir camada"><i data-icon="trash"></i></button></div>`;
     host.append(row);
   }
   drawIcons(host);
   let l = layers.find((x) => x.id === s.active) || layers.at(-1);
-  $("#opacity-range").value = Math.round(l.opacity * 100);
-  $("#opacity-output").textContent = `${Math.round(l.opacity * 100)}%`;
-  let g = $(`#${CSS.escape(l.id)}`);
-  if (g) g.setAttribute("opacity", l.opacity);
+  if (l) {
+    $("#opacity-range").value = Math.round(l.opacity * 100);
+    $("#opacity-output").textContent = `${Math.round(l.opacity * 100)}%`;
+    let g = $(`#${CSS.escape(l.id)}`);
+    if (g) g.setAttribute("opacity", l.opacity);
+  }
 }
 function tool(t) {
   s.tool = t;
@@ -304,46 +417,115 @@ svg.addEventListener("pointerdown", (e) => {
     targetLayer =
       target && layers.find((l) => l.id === target.parentElement?.id),
     editable = targetLayer && !targetLayer.locked && targetLayer.visible;
+
   if (s.tool === "select") {
-    if (editable) {
+    if (s.selection?.elements?.length) {
+      if (target && s.selection.elements.includes(target)) {
+        s.selection.start = pt(e);
+        svg.setPointerCapture(e.pointerId);
+        return;
+      }
+    }
+    clearSelection();
+    if (editable && target) {
       s.active = targetLayer.id;
       updateLayers();
+      target.classList.add("selected-element");
       s.selection = {
-        element: target,
+        elements: [target],
         start: pt(e),
-        original: target.getAttribute("transform") || "",
+        originals: [
+          { el: target, transform: target.getAttribute("transform") || "" },
+        ],
       };
       svg.setPointerCapture(e.pointerId);
     }
     return;
   }
-  if (s.tool === "eraser") {
-    if (editable) {
-      target.remove();
-      saveHistory();
-      empty();
-    } else toast("Clique sobre um traço desbloqueado para apagá-lo.");
-    return;
-  }
+
   let l = layers.find((x) => x.id === s.active);
-  if (!l || l.locked || !l.visible) return;
-  if (s.tool === "fill") {
-    if (!editable) return toast("Clique em uma forma fechada e desbloqueada.");
-    let d = target.getAttribute("d") || "",
-      closed =
-        /z\s*$/i.test(d) ||
-        ["polygon", "rect", "circle", "ellipse"].includes(
-          target.tagName.toLowerCase(),
-        );
-    if (!closed)
-      return toast(
-        "Esse traço está aberto. O balde preenche apenas formas fechadas.",
-      );
-    target.setAttribute("fill", s.color);
-    target.setAttribute("stroke", s.color);
-    saveHistory();
+  if (!l || l.locked || !l.visible) {
+    return toast("Selecione uma camada desbloqueada e visível.");
+  }
+
+  if (s.tool === "eraser") {
+    const mask = ensureLayerMask(s.active);
+    if (!mask) return;
+
+    s.drawing = true;
+    s.points = [pt(e)];
+    let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.dataset.drawId = crypto.randomUUID();
+    p.dataset.type = "eraser-stroke";
+    p.setAttribute("d", pointsToPathD(s.points, false, 1));
+    p.setAttribute("fill", "none");
+    p.setAttribute("stroke", "black");
+    p.setAttribute("stroke-width", s.width);
+    p.setAttribute("stroke-linecap", "round");
+    p.setAttribute("stroke-linejoin", "round");
+    p.setAttribute("vector-effect", "non-scaling-stroke");
+    s.path = p;
+    mask.append(p);
+    svg.setPointerCapture(e.pointerId);
     return;
   }
+
+  if (s.tool === "fill") {
+    let fillTarget = target;
+    const clickPoint = pt(e);
+
+    if (!fillTarget) {
+      const g = $(`#${CSS.escape(s.active)}`);
+      if (g) {
+        const paths = [...g.querySelectorAll("[data-draw-id]")].reverse();
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        for (const el of paths) {
+          const d = el.getAttribute("d");
+          if (d && ctx) {
+            try {
+              const p2d = new Path2D(d);
+              if (ctx.isPointInPath(p2d, clickPoint.x, clickPoint.y)) {
+                fillTarget = el;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+
+    if (!fillTarget) {
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      fillTarget = elements.find((el) => {
+        const g = el.closest("g");
+        return el.hasAttribute("data-draw-id") && g && g.id === s.active;
+      });
+    }
+
+    if (!fillTarget) {
+      return toast("Clique dentro de uma forma ou sobre um traço para preencher.");
+    }
+
+    const ftLayer = layers.find((ly) => ly.id === fillTarget.parentElement?.id);
+    if (!ftLayer || ftLayer.locked || !ftLayer.visible) {
+      return toast("Essa forma está em uma camada bloqueada ou oculta.");
+    }
+
+    if (fillTarget.tagName.toLowerCase() === "path") {
+      let d = (fillTarget.getAttribute("d") || "").trim();
+      if (!/z\s*$/i.test(d)) {
+        fillTarget.setAttribute("d", `${d} Z`);
+      }
+    }
+    fillTarget.setAttribute("fill", s.color);
+    fillTarget.setAttribute("fill-rule", "evenodd");
+    saveHistory();
+    toast("Forma preenchida");
+    trackEvent("shape_filled", { layer_id: ftLayer.id, color: s.color });
+    return;
+  }
+
   s.drawing = true;
   s.points = [pt(e)];
   let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -360,14 +542,16 @@ svg.addEventListener("pointerdown", (e) => {
   svg.setPointerCapture(e.pointerId);
 });
 svg.addEventListener("pointermove", (e) => {
-  if (s.selection) {
+  if (s.selection && s.selection.start && s.selection.elements?.length) {
     let p = pt(e),
       dx = p.x - s.selection.start.x,
       dy = p.y - s.selection.start.y;
-    s.selection.element.setAttribute(
-      "transform",
-      `${s.selection.original} translate(${dx.toFixed(1)} ${dy.toFixed(1)})`.trim(),
-    );
+    for (let item of s.selection.originals) {
+      item.el.setAttribute(
+        "transform",
+        `${item.transform} translate(${dx.toFixed(1)} ${dy.toFixed(1)})`.trim(),
+      );
+    }
     refreshCode();
     return;
   }
@@ -385,19 +569,23 @@ svg.addEventListener("pointermove", (e) => {
   empty();
 });
 function finish() {
-  if (s.selection) {
-    s.selection = null;
+  if (s.selection && s.selection.start) {
+    for (let item of s.selection.originals) {
+      item.transform = item.el.getAttribute("transform") || "";
+    }
+    s.selection.start = null;
     saveHistory();
     return;
   }
   if (!s.drawing) return;
   s.drawing = false;
   if (s.path) {
-    const closed = isPathClosed(s.points, s.width);
+    const isEraser = s.tool === "eraser";
+    const closed = isEraser ? false : isPathClosed(s.points, s.width);
     const epsilon = Math.max(0.6, s.width * 0.12);
     const simplified = simplifyRDP(s.points, epsilon);
     s.path.setAttribute("d", pointsToPathD(simplified, closed, 1));
-    trackEvent("stroke_completed", {
+    trackEvent(isEraser ? "eraser_stroke_completed" : "stroke_completed", {
       tool: s.tool,
       layer_id: s.active,
       points_count: simplified.length,
@@ -417,11 +605,13 @@ $$(".swatch").forEach(
       s.color = b.dataset.color;
       $("#color-picker").value = s.color;
       $$(".swatch").forEach((x) => x.classList.toggle("selected", x === b));
+      applyColorToSelection(s.color);
     }),
 );
 $("#color-picker").oninput = (e) => {
   s.color = e.target.value;
   $$(".swatch").forEach((x) => x.classList.remove("selected"));
+  applyColorToSelection(s.color);
 };
 $("#stroke-width").oninput = (e) => {
   s.width = +e.target.value;
@@ -444,11 +634,20 @@ $("#redo").onclick = () => {
 $("#clear").onclick = () => {
   if (!root.querySelector("path,circle,rect,ellipse,polygon,polyline,line"))
     return toast("A prancheta já está vazia.");
-  root.querySelectorAll("g").forEach((g) => g.replaceChildren());
+  root.querySelectorAll("g").forEach((g) => {
+    g.replaceChildren();
+    g.removeAttribute("mask");
+  });
+  const defsEl = $("#artboard-defs");
+  if (defsEl) defsEl.replaceChildren();
+  layers.forEach((l) => (l.mask = ""));
+  clearSelection();
   saveHistory();
   empty();
   toast("Prancheta limpa");
 };
+const selectAllBtn = $("#select-all-btn");
+if (selectAllBtn) selectAllBtn.onclick = selectAll;
 $("#size-select").onchange = (e) => {
   [s.w, s.h] = e.target.value.split(",").map(Number);
   svg.setAttribute("viewBox", `0 0 ${s.w} ${s.h}`);
@@ -486,11 +685,34 @@ $("#layer-list").onclick = (e) => {
   if (!row) return;
   let l = layers.find((x) => x.id === row.dataset.id),
     a = e.target.closest("button")?.dataset.action;
-  if (a === "delete") {
+  if (a === "move-up") {
+    let idx = layers.findIndex((x) => x.id === l.id);
+    if (idx < layers.length - 1) {
+      let [item] = layers.splice(idx, 1);
+      layers.splice(idx + 1, 0, item);
+      layers.forEach((ly) => root.append($(`#${CSS.escape(ly.id)}`)));
+      updateLayers();
+      saveHistory();
+      toast("Camada movida para cima");
+    }
+  } else if (a === "move-down") {
+    let idx = layers.findIndex((x) => x.id === l.id);
+    if (idx > 0) {
+      let [item] = layers.splice(idx, 1);
+      layers.splice(idx - 1, 0, item);
+      layers.forEach((ly) => root.append($(`#${CSS.escape(ly.id)}`)));
+      updateLayers();
+      saveHistory();
+      toast("Camada movida para baixo");
+    }
+  } else if (a === "delete") {
     if (layers.length === 1) return toast("Mantenha pelo menos uma camada.");
     $(`#${CSS.escape(l.id)}`).remove();
+    const mask = $(`#mask-${CSS.escape(l.id)}`);
+    if (mask) mask.remove();
     layers = layers.filter((x) => x.id !== l.id);
     if (s.active === l.id) s.active = layers.at(-1).id;
+    clearSelection();
     updateLayers();
     saveHistory();
     toast("Camada excluída");
@@ -542,18 +764,27 @@ $("#layer-list").ondragover = (e) => {
   e.preventDefault();
   e.target.closest(".layer-row")?.classList.add("drag-over");
 };
+$("#layer-list").ondragleave = (e) => {
+  e.target.closest(".layer-row")?.classList.remove("drag-over");
+};
 $("#layer-list").ondrop = (e) => {
   e.preventDefault();
   let r = e.target.closest(".layer-row");
+  $$(".layer-row").forEach((row) =>
+    row.classList.remove("drag-over", "dragging"),
+  );
   if (!r || !s.drag || r.dataset.id === s.drag) return;
-  let a = layers.findIndex((x) => x.id === s.drag),
-    b = layers.findIndex((x) => x.id === r.dataset.id),
-    [m] = layers.splice(a, 1);
-  layers.splice(b, 0, m);
-  layers.forEach((l) => root.append($(`#${CSS.escape(l.id)}`)));
-  s.drag = null;
-  updateLayers();
-  saveHistory();
+  let fromIdx = layers.findIndex((x) => x.id === s.drag),
+    toIdx = layers.findIndex((x) => x.id === r.dataset.id);
+  if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
+    let [m] = layers.splice(fromIdx, 1);
+    layers.splice(toIdx, 0, m);
+    layers.forEach((l) => root.append($(`#${CSS.escape(l.id)}`)));
+    s.drag = null;
+    updateLayers();
+    saveHistory();
+    toast("Camadas reordenadas");
+  }
 };
 $("#opacity-range").oninput = (e) => {
   let l = layers.find((x) => x.id === s.active);
@@ -796,9 +1027,31 @@ $$(".inspector-tab").forEach((b) => {
   };
 });
 document.onkeydown = (e) => {
-  if (e.key === "Escape") closeGallery();
+  if (e.key === "Escape") {
+    closeGallery();
+    clearSelection();
+  }
   if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName))
     return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+    e.preventDefault();
+    selectAll();
+    return;
+  }
+  if (e.key === "Delete" || e.key === "Backspace") {
+    if (s.selection && s.selection.elements?.length) {
+      e.preventDefault();
+      const count = s.selection.elements.length;
+      s.selection.elements.forEach((el) => el.remove());
+      clearSelection();
+      saveHistory();
+      empty();
+      toast(
+        `${count} ${count === 1 ? "elemento excluído" : "elementos excluídos"}`,
+      );
+      return;
+    }
+  }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();
     (e.shiftKey ? $("#redo") : $("#undo")).click();

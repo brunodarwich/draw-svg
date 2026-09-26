@@ -130,3 +130,24 @@ test('SVG Serializer - analyzeSvg extracts accurate metrics and line counts', ()
   assert.ok(analysis.bytes > 0);
   assert.ok(analysis.sizeKb >= 0);
 });
+
+test('SVG Serializer - serializeSvg with defs and mask attributes', () => {
+  const layers = [
+    { id: 'layer-1', name: 'Desenho', visible: true, locked: false, opacity: 1, mask: 'url(#mask-layer-1)' },
+  ];
+  const defsHtml = '<mask id="mask-layer-1"><rect fill="white" /><path d="M 0 0 L 5 5" stroke="black" /></mask>';
+
+  const svgXml = serializeSvg({
+    width: 800,
+    height: 600,
+    layers,
+    getLayerChildrenHtml: () => '<path d="M 0 0 L 20 20" stroke="#0ea5e9" />',
+    defsHtml,
+    pretty: true,
+  });
+
+  assert.ok(svgXml.includes('<defs>'));
+  assert.ok(svgXml.includes('id="mask-layer-1"'));
+  assert.ok(svgXml.includes('mask="url(#mask-layer-1)"'));
+  assert.ok(svgXml.includes('</defs>'));
+});

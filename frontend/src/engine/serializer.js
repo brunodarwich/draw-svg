@@ -27,11 +27,27 @@ export function escapeXml(str) {
  * @param {boolean} [options.pretty=true] - Se deve formatar com quebras de linha e indentação.
  * @returns {string} String do SVG serializado.
  */
-export function serializeSvg({ width, height, layers, getLayerChildrenHtml, pretty = true }) {
+export function serializeSvg({ width, height, layers, getLayerChildrenHtml, getLayerMaskAttr, defsHtml = '', pretty = true }) {
   const indent = pretty ? '  ' : '';
   const newline = pretty ? '\n' : '';
 
   let xml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${newline}`;
+
+  if (defsHtml && defsHtml.trim()) {
+    if (pretty) {
+      xml += `${indent}<defs>${newline}`;
+      const defLines = defsHtml
+        .replace(/></g, `>${newline}<`)
+        .split(newline)
+        .filter((l) => l.trim().length > 0);
+      for (const line of defLines) {
+        xml += `${indent}${indent}${line.trim()}${newline}`;
+      }
+      xml += `${indent}</defs>${newline}`;
+    } else {
+      xml += `<defs>${defsHtml.trim()}</defs>`;
+    }
+  }
 
   for (const layer of layers) {
     const layerContent = getLayerChildrenHtml ? getLayerChildrenHtml(layer.id) : '';
@@ -39,9 +55,11 @@ export function serializeSvg({ width, height, layers, getLayerChildrenHtml, pret
     const lockedAttr = layer.locked ? ' data-locked="true"' : ' data-locked="false"';
     const opacityAttr = ` opacity="${layer.opacity ?? 1}"`;
     const nameAttr = ` data-name="${escapeXml(layer.name)}"`;
+    const maskVal = getLayerMaskAttr ? getLayerMaskAttr(layer.id) : (layer.mask || '');
+    const maskAttr = maskVal ? ` mask="${escapeXml(maskVal)}"` : '';
 
     if (pretty) {
-      xml += `${indent}<g id="${escapeXml(layer.id)}"${nameAttr}${lockedAttr}${opacityAttr}${visibleAttr}>${newline}`;
+      xml += `${indent}<g id="${escapeXml(layer.id)}"${nameAttr}${lockedAttr}${opacityAttr}${visibleAttr}${maskAttr}>${newline}`;
       if (layerContent.trim()) {
         const lines = layerContent
           .replace(/></g, `>${newline}<`)
@@ -53,7 +71,7 @@ export function serializeSvg({ width, height, layers, getLayerChildrenHtml, pret
       }
       xml += `${indent}</g>${newline}`;
     } else {
-      xml += `<g id="${escapeXml(layer.id)}"${nameAttr}${lockedAttr}${opacityAttr}${visibleAttr}>${layerContent.trim()}</g>`;
+      xml += `<g id="${escapeXml(layer.id)}"${nameAttr}${lockedAttr}${opacityAttr}${visibleAttr}${maskAttr}>${layerContent.trim()}</g>`;
     }
   }
 

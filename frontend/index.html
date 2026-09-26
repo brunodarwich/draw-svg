@@ -59,6 +59,14 @@
           <button class="text-button" id="clear">
             <i data-icon="trash-2"></i><span>Limpar</span>
           </button>
+          <button
+            class="text-button"
+            id="select-all-btn"
+            title="Selecionar todos os elementos da camada (Ctrl+A)"
+            aria-label="Selecionar todos os elementos"
+          >
+            <i data-icon="check-square"></i><span>Sel. Tudo</span>
+          </button>
           <span class="divider"></span>
           <div class="zoom-control">
             <button class="icon-button" id="zoom-out" aria-label="Reduzir zoom">
@@ -189,6 +197,7 @@
               role="img"
               aria-label="Prancheta de desenho em branco"
             >
+              <defs id="artboard-defs"></defs>
               <g id="layers-root"></g>
             </svg>
             <div class="empty-hint" id="empty-hint">
