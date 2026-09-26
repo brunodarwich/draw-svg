@@ -1,0 +1,28 @@
+# Ambientes e segredos
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependências
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Build e saída
+dist/
+build/
+out/
+.next/
+*.log
+
+# IDE e Sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

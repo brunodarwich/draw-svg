@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Visual Integrado — Desenvolvimento & Métricas com IA</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+
+  <!-- Direct Local Data Scripts (Bypasses file:// CORS restrictions in modern browsers) -->
+  <script src="./tasks_data.js" onerror="console.info('tasks_data.js ausente, tentando fetch/cache.')"></script>
+  <script src="./analytics_data.js" onerror="console.info('analytics_data.js ausente, tentando fetch/cache.')"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold text-lg">
+          IA
+        </div>
+        <div>
+          <h1 id="proj-title" class="font-bold text-base sm:text-lg leading-tight text-white flex items-center gap-2">
+            Carregando Projeto...
+          </h1>
+          <p id="proj-summary" class="text-xs text-slate-400 line-clamp-1 max-w-xl">
+            Acompanhamento visual em tempo real de tarefas e telemetria de produto
+          </p>
+        </div>
+      </div>
+      
+      <!-- Right Side Actions & Navigation Tabs -->
+      <div class="flex items-center space-x-3">
+        <!-- Tab Selector Switcher -->
+        <div class="flex bg-slate-800/80 p-1 rounded-xl border border-slate-700/80 text-xs font-semibold">
+          <button id="tab-tasks-btn" onclick="switchTab('tasks')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white shadow transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span>Tarefas (Kanban)</span>
+          </button>
+          <button id="tab-analytics-btn" onclick="switchTab('analytics')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <span>Métricas & Growth</span>
+          </button>
+        </div>
+
+        <button id="refresh-btn" onclick="loadAllData()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition" title="Atualizar dados">
+          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span class="hidden sm:inline">Atualizar</span>
+        </button>
+
+        <span class="hidden md:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          v1.1.0
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    
+    <!-- Hidden File Inputs for Manual Upload / Fallback -->
+    <input type="file" id="file-input-tasks" accept=".json" class="hidden" onchange="handleFileSelect(event, 'tasks')">
+    <input type="file" id="file-input-analytics" accept=".json" class="hidden" onchange="handleFileSelect(event, 'analytics')">
+
+    <!-- Interactive Synchronization & Local Mode Banner -->
+    <div id="file-protocol-alert" class="hidden bg-slate-900 border border-indigo-500/30 rounded-2xl p-4 text-xs text-slate-200 shadow-xl transition-all">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="flex items-start md:items-center space-x-3">
+          <div id="sync-icon-box" class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-base shrink-0">
+            ⚡
+          </div>
+          <div>
+            <strong id="sync-status-title" class="font-bold text-white text-sm">Modo de Abertura Local</strong>
+            <p id="sync-status-desc" class="text-slate-400 mt-0.5">Seus dados foram carregados via espelho local. Para atualizações automáticas contínuas, use o inicializador.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+          <label for="file-input-tasks" class="cursor-pointer px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center space-x-1.5 shadow-sm text-xs">
+            <span>📂 Carregar tasks.json</span>
+          </label>
+          <label for="file-input-analytics" class="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition text-xs">
+            <span>📊 Carregar analytics.json</span>
+          </label>
+          <button onclick="document.getElementById('file-protocol-alert').classList.add('hidden')" class="text-slate-500 hover:text-white p-1 ml-1" title="Fechar aviso">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW 1: TASKS KANBAN ==================== -->
+    <div id="view-tasks" class="space-y-6">
+      
+      <!-- Metrics & Progress Overview Bar -->
+      <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Progresso Geral</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metric-percent" class="text-3xl font-extrabold text-white">0%</span>
+            <span id="metric-tasks-ratio" class="text-xs font-medium text-slate-400">0/0 tarefas</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
+            <div id="metric-progress-bar" class="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Em Andamento</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metric-in-progress" class="text-3xl font-extrabold text-amber-400">0</span>
+            <span class="text-xs text-slate-400">foco atual</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Princípio: 1 coisa de cada vez</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Auditorias Aprovadas</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="metric-audited" class="text-3xl font-extrabold text-emerald-400">0</span>
+            <span class="text-xs text-slate-400">revisadas</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Validadas pelo modelo Tier 3</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Orquestração Multi-Tier</div>
+          <div class="mt-2 flex items-center space-x-2 text-xs font-medium text-slate-300">
+            <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Ponta</span>
+            <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Leve</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Review</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Sub-agentes Flash + Auditoria</p>
+        </div>
+      </section>
+
+      <!-- Stepper Visual de Marcos de Desenvolvimento (Pipeline) -->
+      <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-800/80">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm">
+              🧭
+            </div>
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">Pipeline de Marcos de Desenvolvimento</h3>
+              <p class="text-[11px] text-slate-400">Clique em qualquer marco para focar as tarefas no Kanban ou ver o progresso da fase</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="milestone-filter-all-btn" onclick="setMilestoneFilter('all')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-sm transition">
+              Todos os Marcos
+            </button>
+          </div>
+        </div>
+
+        <!-- Stepper Cards Grid -->
+        <div id="milestones-stepper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+          <!-- Renderizado dinamicamente via renderMilestonesStepper() -->
+        </div>
+      </section>
+
+      <!-- Filter and Search Controls -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="relative w-full sm:w-72">
+          <input type="text" id="search-input" oninput="filterCards()" placeholder="Buscar tarefas ou indicadores..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 pl-9 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+          <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+        <div class="flex items-center space-x-2 w-full sm:w-auto text-xs">
+          <span class="text-slate-400">Filtrar por Tier:</span>
+          <button onclick="setTierFilter('all')" class="tier-filter-btn px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium transition" data-tier="all">Todos</button>
+          <button onclick="setTierFilter('tier1_frontier')" class="tier-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition" data-tier="tier1_frontier">Ponta</button>
+          <button onclick="setTierFilter('tier2_fast')" class="tier-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition" data-tier="tier2_fast">Leve</button>
+          <button onclick="setTierFilter('tier3_reviewer')" class="tier-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition" data-tier="tier3_reviewer">Reviewer</button>
+        </div>
+      </div>
+
+      <!-- Kanban Board Columns Grid -->
+      <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Coluna: Backlog / A Fazer -->
+        <div class="flex flex-col bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 min-h-[500px]">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3 px-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+              <h2 class="font-semibold text-xs uppercase tracking-wider text-slate-300">Backlog / A Fazer</h2>
+            </div>
+            <span id="badge-count-todo" class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400">0</span>
+          </div>
+          <div id="col-todo" class="space-y-3 flex-1 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Coluna: Em Desenvolvimento -->
+        <div class="flex flex-col bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 min-h-[500px]">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3 px-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <h2 class="font-semibold text-xs uppercase tracking-wider text-slate-300">Em Desenvolvimento</h2>
+            </div>
+            <span id="badge-count-in_progress" class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400">0</span>
+          </div>
+          <div id="col-in_progress" class="space-y-3 flex-1 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Coluna: Em Revisão & Auditoria -->
+        <div class="flex flex-col bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 min-h-[500px]">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3 px-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+              <h2 class="font-semibold text-xs uppercase tracking-wider text-slate-300">Em Auditoria / Review</h2>
+            </div>
+            <span id="badge-count-review" class="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400">0</span>
+          </div>
+          <div id="col-review" class="space-y-3 flex-1 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Coluna: Concluído / Entregue -->
+        <div class="flex flex-col bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 min-h-[500px]">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3 px-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <h2 class="font-semibold text-xs uppercase tracking-wider text-slate-300">Entregue / Concluído</h2>
+            </div>
+            <span id="badge-count-done" class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400">0</span>
+          </div>
+          <div id="col-done" class="space-y-3 flex-1 overflow-y-auto pr-1"></div>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- ==================== VIEW 2: PRODUCT METRICS & GROWTH ==================== -->
+    <div id="view-analytics" class="hidden space-y-6">
+      
+      <!-- Top KPIs Grid -->
+      <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Usuários Ativos (DAU / MAU)</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="analytics-dau" class="text-3xl font-extrabold text-white">0</span>
+            <span id="analytics-mau" class="text-xs font-medium text-slate-400">MAU: 0</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Princípio 4: Registro de uso contínuo</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Receita Recorrente (MRR)</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="analytics-mrr" class="text-3xl font-extrabold text-emerald-400">R$ 0,00</span>
+            <span id="analytics-mrr-usd" class="text-xs font-medium text-slate-400">$0 USD</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Monetização dupla (Pix + Stripe)</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Ativação (Aha! Moment)</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="analytics-activation" class="text-3xl font-extrabold text-indigo-400">0%</span>
+            <span class="text-xs text-slate-400">primeiro uso core</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Conversão de onboarding em valor</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Conversão de Checkout</div>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="analytics-checkout" class="text-3xl font-extrabold text-purple-400">0%</span>
+            <span class="text-xs text-slate-400">checkout → pago</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-3">Eficiência do funil financeiro</p>
+        </div>
+      </section>
+
+      <!-- Main Analytics Layout: Funnel + Empty State / Events Feed -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Funil de Crescimento e Conversão -->
+        <div class="lg:col-span-1 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <span>🎯 Funil de Conversão</span>
+            </h3>
+            <span class="text-[11px] text-slate-500 font-mono">Growth Hacking</span>
+          </div>
+
+          <div id="funnel-container" class="space-y-3">
+            <!-- Funnel Steps renderizados via JS -->
+          </div>
+        </div>
+
+        <!-- Right: Feed de Eventos de Telemetria ou Empty State -->
+        <div class="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <span>📡 Feed de Eventos de Telemetria (Em Tempo Real)</span>
+              </h3>
+              <span id="events-count-badge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400">0 eventos</span>
+            </div>
+
+            <!-- Empty State Real (Sem dados mockados) -->
+            <div id="analytics-empty-state" class="py-8 px-4 text-center space-y-4">
+              <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl text-indigo-400">
+                📊
+              </div>
+              <div class="max-w-md mx-auto space-y-1">
+                <h4 class="text-sm font-bold text-white">Nenhum evento registrado ainda</h4>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  Conforme o Princípio 4, este dashboard não inventa métricas falsas. Quando o seu app disparar eventos, eles aparecerão aqui automaticamente via <code class="text-indigo-300">analytics.json</code>.
+                </p>
+              </div>
+
+              <!-- Integration Guide Box -->
+              <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 text-left max-w-lg mx-auto space-y-2">
+                <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Como Conectar a Telemetria:</div>
+                <p class="text-[11px] text-slate-400">
+                  Adicione chamadas aos eventos previstos no seu PRD (ex: <code class="text-indigo-400">user_signed_up</code>, <code class="text-indigo-400">feature_core_used</code>, <code class="text-indigo-400">checkout_started</code>, <code class="text-indigo-400">payment_completed</code>).
+                </p>
+                <pre class="bg-slate-900 p-2.5 rounded-lg text-[10px] font-mono text-slate-300 overflow-x-auto border border-slate-800"><code>// Exemplo de registro no analytics.json da aplicação:
+analytics.recent_events.unshift({
+  event: 'payment_completed',
+  amount_cents: 4700,
+  method: 'pix',
+  timestamp: new Date().toISOString()
+});</code></pre>
+              </div>
+            </div>
+
+            <!-- Table of Real Events (Visible when events exist) -->
+            <div id="analytics-events-table-wrapper" class="hidden overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-800 bg-slate-900/40">
+                  <tr>
+                    <th class="py-2.5 px-3">Evento</th>
+                    <th class="py-2.5 px-3">Propriedades</th>
+                    <th class="py-2.5 px-3">Data / Hora</th>
+                  </tr>
+                </thead>
+                <tbody id="analytics-events-tbody" class="divide-y divide-slate-800/60 font-mono text-[11px]">
+                  <!-- Event rows renderizados via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Fonte de dados: <code class="text-slate-400 font-mono">analytics.json</code></span>
+            <span>Conformidade: LGPD / GDPR (Zero PII)</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>Framework AGENTS.md — Protocolo de Desenvolvimento Autônomo com IA</p>
+      <p>Desenvolvido para máxima clareza visual, controle e produtividade</p>
+    </div>
+  </footer>
+
+  <!-- Modal de Detalhes da Tarefa -->
+  <div id="task-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
+      <div class="flex items-center space-x-2">
+        <span id="modal-id" class="px-2 py-0.5 text-xs font-mono font-bold bg-slate-800 text-indigo-400 rounded"></span>
+        <span id="modal-milestone" class="px-2 py-0.5 text-xs font-semibold rounded bg-slate-800 text-indigo-300 border border-slate-700/80"></span>
+        <span id="modal-tier" class="px-2 py-0.5 text-xs font-semibold rounded"></span>
+        <span id="modal-status" class="px-2 py-0.5 text-xs font-semibold rounded"></span>
+      </div>
+      <h3 id="modal-title" class="text-base font-bold text-white"></h3>
+      <p id="modal-desc" class="text-xs text-slate-300 leading-relaxed"></p>
+      
+      <div>
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Metas & Indicadores de Aceite:</h4>
+        <ul id="modal-indicators" class="space-y-1.5 text-xs text-slate-300"></ul>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+        <span id="modal-created"></span>
+        <span id="modal-audit-badge" class="font-semibold"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drag and Drop Overlay Visual -->
+  <div id="drag-drop-overlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center border-4 border-dashed border-indigo-500 rounded-3xl m-6 pointer-events-none hidden transition-all">
+    <div class="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-3xl mb-4 animate-bounce">
+      📥
+    </div>
+    <h3 class="text-lg font-bold text-white">Solte o arquivo tasks.json ou analytics.json aqui</h3>
+    <p class="text-xs text-slate-400 mt-1">O painel atualizará os dados e o progresso imediatamente</p>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    let appState = {
+      project: {},
+      milestones: [],
+      tasks: [],
+      analytics: {
+        kpis: { active_users_daily: 0, active_users_monthly: 0, total_signups: 0, mrr_brl: 0, mrr_usd: 0, checkout_conversion_rate: 0, activation_rate: 0 },
+        funnel: [],
+        recent_events: []
+      },
+      currentTierFilter: 'all',
+      currentMilestoneFilter: 'all',
+      searchQuery: '',
+      currentTab: 'tasks'
+    };
+
+    function switchTab(tab) {
+      appState.currentTab = tab;
+      const tasksView = document.getElementById('view-tasks');
+      const analyticsView = document.getElementById('view-analytics');
+      const tasksBtn = document.getElementById('tab-tasks-btn');
+      const analyticsBtn = document.getElementById('tab-analytics-btn');
+
+      if (tab === 'tasks') {
+        tasksView.classList.remove('hidden');
+        analyticsView.classList.add('hidden');
+        tasksBtn.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white shadow transition';
+        analyticsBtn.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition';
+      } else {
+        tasksView.classList.add('hidden');
+        analyticsView.classList.remove('hidden');
+        analyticsBtn.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white shadow transition';
+        tasksBtn.className = 'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition';
+        renderAnalyticsView();
+      }
+    }
+
+    async function loadAllData() {
+      await Promise.all([loadTasksData(), loadAnalyticsData()]);
+      setupDragAndDrop();
+    }
+
+    function applyTasksData(data, source) {
+      appState.project = data.project || appState.project || {};
+      appState.milestones = data.milestones || appState.milestones || [
+        { id: "m1_fundacao", title: "Marco 1: Fundação & Planejamento", order: 1 },
+        { id: "m2_design_arte", title: "Marco 2: Design UI/UX & Direção de Arte", order: 2 },
+        { id: "m3_backend_core", title: "Marco 3: Backend Core & Testes", order: 3 },
+        { id: "m4_frontend_ui", title: "Marco 4: Frontend & Integração", order: 4 },
+        { id: "m5_auditoria_growth", title: "Marco 5: Auditoria & Go-to-Market", order: 5 }
+      ];
+      appState.tasks = data.tasks || [];
+      console.log(`[Dashboard] Tarefas sincronizadas via: ${source} (${appState.tasks.length} itens)`);
+    }
+
+    async function loadTasksData() {
+      let loaded = false;
+
+      // 1. Tentar ler a partir do script local embutido (window.__TASKS_DATA__)
+      // Isso funciona 100% no protocolo file:// sem nenhum bloqueio de CORS
+      if (window.__TASKS_DATA__ && window.__TASKS_DATA__.tasks) {
+        applyTasksData(window.__TASKS_DATA__, 'Script Espelho (tasks_data.js)');
+        loaded = true;
+      }
+
+      // 2. Tentar buscar ao vivo via fetch (funciona em http://localhost ou servidores web locais)
+      try {
+        const response = await fetch('./tasks.json?t=' + Date.now());
+        if (response.ok) {
+          const data = await response.json();
+          applyTasksData(data, 'Fetch HTTP (tasks.json)');
+          localStorage.setItem('antigravity_tasks_cache', JSON.stringify(data));
+          loaded = true;
+          // Se carregou com sucesso via HTTP, pode ocultar o banner de alerta
+          const alertEl = document.getElementById('file-protocol-alert');
+          if (alertEl && window.location.protocol !== 'file:') {
+            alertEl.classList.add('hidden');
+          }
+        }
+      } catch (err) {
+        console.warn('tasks.json não acessível via fetch direto (CORS local file://).');
+      }
+
+      // 3. Fallback: Se não carregou por script nem fetch, tentar cache do localStorage
+      if (!loaded || !appState.tasks || appState.tasks.length === 0) {
+        const cached = localStorage.getItem('antigravity_tasks_cache');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            applyTasksData(parsed, 'Cache Local (localStorage)');
+            loaded = true;
+          } catch (e) {
+            console.warn('Erro ao ler cache de tarefas:', e);
+          }
+        }
+      }
+
+      // 4. Configurar status na barra de alerta para protocolo file://
+      if (window.location.protocol === 'file:') {
+        const alertEl = document.getElementById('file-protocol-alert');
+        const titleEl = document.getElementById('sync-status-title');
+        const descEl = document.getElementById('sync-status-desc');
+        if (alertEl && titleEl && descEl) {
+          alertEl.classList.remove('hidden');
+          if (loaded && appState.tasks && appState.tasks.length > 0) {
+            titleEl.innerText = "Modo Local: Dados Sincronizados";
+            descEl.innerHTML = `Exibindo <strong>${appState.tasks.length} tarefas</strong> via espelho local. Para sincronização contínua em tempo real, use o <code>abrir_dashboard.bat</code>.`;
+          } else {
+            titleEl.innerText = "Modo Local: Selecione o Arquivo";
+            descEl.innerText = "O navegador bloqueou a leitura automática por segurança (CORS file://). Clique ao lado ou arraste o tasks.json nesta tela:";
+          }
+        }
+      }
+
+      renderTasksView();
+    }
+
+    async function loadAnalyticsData() {
+      let loaded = false;
+
+      // 1. Tentar ler a partir do script local embutido
+      if (window.__ANALYTICS_DATA__) {
+        appState.analytics = window.__ANALYTICS_DATA__;
+        loaded = true;
+      }
+
+      // 2. Tentar fetch
+      try {
+        const response = await fetch('./analytics.json?t=' + Date.now());
+        if (response.ok) {
+          const data = await response.json();
+          appState.analytics = data;
+          localStorage.setItem('antigravity_analytics_cache', JSON.stringify(data));
+          loaded = true;
+        }
+      } catch (err) {
+        console.warn('analytics.json não encontrado ou inacessível via fetch.');
+      }
+
+      // 3. Fallback localStorage
+      if (!loaded) {
+        const cached = localStorage.getItem('antigravity_analytics_cache');
+        if (cached) {
+          try {
+            appState.analytics = JSON.parse(cached);
+          } catch(e) {}
+        }
+      }
+
+      if (appState.currentTab === 'analytics') {
+        renderAnalyticsView();
+      }
+    }
+
+    // Processamento de Arquivos Locais (Manual / Input ou Drag and Drop)
+    function handleFileSelect(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
+      processFile(file, type);
+    }
+
+    function processFile(file, forcedType) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.tasks || forcedType === 'tasks') {
+            applyTasksData(data, `Arquivo manual: ${file.name}`);
+            localStorage.setItem('antigravity_tasks_cache', JSON.stringify(data));
+            renderTasksView();
+            showToast(`✅ Tarefas de "${file.name}" carregadas com sucesso! (${data.tasks ? data.tasks.length : 0} itens)`, 'success');
+          } else if (data.kpis || data.funnel || forcedType === 'analytics') {
+            appState.analytics = data;
+            localStorage.setItem('antigravity_analytics_cache', JSON.stringify(data));
+            if (appState.currentTab === 'analytics') renderAnalyticsView();
+            showToast(`✅ Métricas de "${file.name}" atualizadas com sucesso!`, 'success');
+          } else {
+            showToast(`⚠️ Arquivo carregado não possui formato esperado de tasks ou analytics.`, 'warning');
+          }
+        } catch (err) {
+          showToast(`❌ Erro ao ler JSON: ${err.message}`, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function setupDragAndDrop() {
+      const overlay = document.getElementById('drag-drop-overlay');
+      let dragCounter = 0;
+
+      window.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dragCounter++;
+        if (overlay) overlay.classList.remove('hidden');
+      });
+
+      window.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0 && overlay) {
+          overlay.classList.add('hidden');
+          dragCounter = 0;
+        }
+      });
+
+      window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        if (overlay) overlay.classList.add('hidden');
+
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0];
+          if (file.name.endsWith('.json')) {
+            processFile(file, null);
+          } else {
+            showToast('⚠️ Por favor, solte um arquivo .json válido (tasks.json ou analytics.json).', 'warning');
+          }
+        }
+      });
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const bgColors = {
+        success: 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200',
+        warning: 'bg-amber-950/90 border-amber-500/40 text-amber-200',
+        error: 'bg-rose-950/90 border-rose-500/40 text-rose-200',
+        info: 'bg-indigo-950/90 border-indigo-500/40 text-indigo-200'
+      };
+
+      toast.className = `border rounded-xl px-4 py-3 shadow-2xl backdrop-blur-md text-xs font-medium flex items-center space-x-2 transition-all duration-300 pointer-events-auto transform translate-y-2 opacity-0 ${bgColors[type] || bgColors.info}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 50);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function renderMilestonesStepper() {
+      const stepperEl = document.getElementById('milestones-stepper');
+      if (!stepperEl) return;
+      stepperEl.innerHTML = '';
+
+      const allBtn = document.getElementById('milestone-filter-all-btn');
+      if (allBtn) {
+        if (appState.currentMilestoneFilter === 'all') {
+          allBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-sm transition';
+        } else {
+          allBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+        }
+      }
+
+      appState.milestones.forEach((m, idx) => {
+        const mTasks = appState.tasks.filter(t => t.milestone === m.id || (!t.milestone && m.id === 'm1_fundacao'));
+        const total = mTasks.length;
+        const done = mTasks.filter(t => t.status === 'done').length;
+        const inProgress = mTasks.filter(t => t.status === 'in_progress').length;
+        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+        let statusText = '⚪ Pendente';
+        let statusStyle = 'text-slate-400 bg-slate-800/80 border-slate-700/60';
+        let cardBorder = 'border-slate-800 hover:border-slate-700 bg-slate-900/60';
+
+        if (total > 0 && done === total) {
+          statusText = '✓ Concluído';
+          statusStyle = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+          cardBorder = 'border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-950/10';
+        } else if (inProgress > 0 || (done > 0 && done < total)) {
+          statusText = '⏳ Em Foco';
+          statusStyle = 'text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse';
+          cardBorder = 'border-amber-500/30 hover:border-amber-500/50 bg-amber-950/10';
+        }
+
+        const isSelected = appState.currentMilestoneFilter === m.id;
+        if (isSelected) {
+          cardBorder = 'border-indigo-500 ring-2 ring-indigo-500/60 bg-indigo-950/30 shadow-lg shadow-indigo-500/10';
+        }
+
+        const card = document.createElement('div');
+        card.className = `border rounded-xl p-3 cursor-pointer transition flex flex-col justify-between space-y-2.5 ${cardBorder}`;
+        card.onclick = () => setMilestoneFilter(m.id);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono font-bold text-slate-400">FASE 0${m.order || idx + 1}</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border ${statusStyle}">${statusText}</span>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-100 line-clamp-1 leading-snug">${m.title}</h4>
+          </div>
+          <div class="space-y-1 pt-1.5 border-t border-slate-800/60">
+            <div class="flex items-center justify-between text-[10px] text-slate-400">
+              <span>Progresso</span>
+              <span class="font-mono font-semibold text-slate-200">${done}/${total} (${percent}%)</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+            </div>
+          </div>
+        `;
+        stepperEl.appendChild(card);
+      });
+    }
+
+    function setMilestoneFilter(milestoneId) {
+      if (appState.currentMilestoneFilter === milestoneId && milestoneId !== 'all') {
+        appState.currentMilestoneFilter = 'all';
+      } else {
+        appState.currentMilestoneFilter = milestoneId;
+      }
+      renderTasksView();
+    }
+
+    function renderTasksView() {
+      // Header Info
+      document.getElementById('proj-title').innerText = appState.project.name || 'Projeto com IA';
+      document.getElementById('proj-summary').innerText = appState.project.summary || 'Acompanhamento de desenvolvimento';
+
+      // Calculate Metrics
+      const total = appState.tasks.length;
+      const completed = appState.tasks.filter(t => t.status === 'done').length;
+      const inProgress = appState.tasks.filter(t => t.status === 'in_progress').length;
+      const audited = appState.tasks.filter(t => t.audit_confirmed).length;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      document.getElementById('metric-percent').innerText = `${percent}%`;
+      document.getElementById('metric-tasks-ratio').innerText = `${completed}/${total} tarefas`;
+      document.getElementById('metric-progress-bar').style.width = `${percent}%`;
+      document.getElementById('metric-in-progress').innerText = inProgress;
+      document.getElementById('metric-audited').innerText = audited;
+
+      // Render Stepper
+      renderMilestonesStepper();
+
+      // Reset columns
+      ['todo', 'in_progress', 'review', 'done'].forEach(col => {
+        const el = document.getElementById(`col-${col}`);
+        if (el) el.innerHTML = '';
+      });
+
+      const counts = { todo: 0, in_progress: 0, review: 0, done: 0 };
+
+      // Filter tasks
+      const filtered = appState.tasks.filter(task => {
+        const matchesTier = appState.currentTierFilter === 'all' || task.tier === appState.currentTierFilter;
+        const matchesMilestone = appState.currentMilestoneFilter === 'all' ||
+          task.milestone === appState.currentMilestoneFilter ||
+          (!task.milestone && appState.currentMilestoneFilter === 'm1_fundacao');
+        const matchesQuery = !appState.searchQuery || 
+          task.title.toLowerCase().includes(appState.searchQuery) ||
+          (task.description && task.description.toLowerCase().includes(appState.searchQuery)) ||
+          task.id.toLowerCase().includes(appState.searchQuery);
+        return matchesTier && matchesMilestone && matchesQuery;
+      });
+
+      filtered.forEach(task => {
+        if (counts[task.status] !== undefined) {
+          counts[task.status]++;
+          renderTaskCard(task);
+        }
+      });
+
+      // Update badge counts
+      ['todo', 'in_progress', 'review', 'done'].forEach(col => {
+        const badge = document.getElementById(`badge-count-${col}`);
+        if (badge) badge.innerText = counts[col];
+      });
+    }
+
+    function renderTaskCard(task) {
+      const col = document.getElementById(`col-${task.status}`);
+      if (!col) return;
+
+      const card = document.createElement('div');
+      card.className = "bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl p-3.5 shadow-sm hover:shadow-md transition cursor-pointer space-y-2.5 group";
+      card.onclick = () => openModal(task);
+
+      // Milestone Tag
+      let milestoneTag = '';
+      if (task.milestone) {
+        const mObj = appState.milestones.find(m => m.id === task.milestone);
+        const shortTitle = mObj ? mObj.title.split(':')[0].trim() : task.milestone;
+        milestoneTag = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-indigo-300 border border-slate-700/80">${shortTitle}</span>`;
+      }
+
+      // Tier Styling
+      let tierBadge = '';
+      if (task.tier === 'tier1_frontier') {
+        tierBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">Tier 1</span>';
+      } else if (task.tier === 'tier2_fast') {
+        tierBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">Tier 2</span>';
+      } else {
+        tierBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Tier 3</span>';
+      }
+
+      // Audit Badge
+      const auditBadge = task.audit_confirmed 
+        ? '<span class="text-emerald-400 text-xs font-bold" title="Auditoria confirmada">✓ Aprovado</span>' 
+        : '<span class="text-slate-500 text-xs">Pendente</span>';
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-1">
+          <span class="text-[10px] font-mono font-bold text-slate-400">${task.id}</span>
+          <div class="flex items-center space-x-1.5 flex-wrap">
+            ${milestoneTag}
+            ${tierBadge}
+          </div>
+        </div>
+        <h4 class="text-xs font-bold text-slate-100 group-hover:text-indigo-400 transition leading-snug">${task.title}</h4>
+        <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${task.description || ''}</p>
+        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+          <span>${task.indicators ? task.indicators.length + ' indicadores' : ''}</span>
+          <div>${auditBadge}</div>
+        </div>
+      `;
+
+      col.appendChild(card);
+    }
+
+    function renderAnalyticsView() {
+      const a = appState.analytics || {};
+      const kpis = a.kpis || {};
+
+      document.getElementById('analytics-dau').innerText = kpis.active_users_daily || 0;
+      document.getElementById('analytics-mau').innerText = `MAU: ${kpis.active_users_monthly || 0}`;
+      document.getElementById('analytics-mrr').innerText = (kpis.mrr_brl || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      document.getElementById('analytics-mrr-usd').innerText = `$${kpis.mrr_usd || 0} USD`;
+      document.getElementById('analytics-activation').innerText = `${kpis.activation_rate || 0}%`;
+      document.getElementById('analytics-checkout').innerText = `${kpis.checkout_conversion_rate || 0}%`;
+
+      // Render Funnel
+      const funnelContainer = document.getElementById('funnel-container');
+      funnelContainer.innerHTML = '';
+      const funnelSteps = a.funnel && a.funnel.length > 0 ? a.funnel : [
+        { step: "1. Descoberta / Visitantes", count: 0, conversion_percentage: 0 },
+        { step: "2. Cadastros (Signups)", count: 0, conversion_percentage: 0 },
+        { step: "3. Ativação (Aha! Moment)", count: 0, conversion_percentage: 0 },
+        { step: "4. Checkout Iniciado", count: 0, conversion_percentage: 0 },
+        { step: "5. Pagamento Confirmado", count: 0, conversion_percentage: 0 }
+      ];
+
+      funnelSteps.forEach((s, idx) => {
+        const stepDiv = document.createElement('div');
+        stepDiv.className = "bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1.5";
+        stepDiv.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-slate-200">${s.step}</span>
+            <span class="font-mono font-bold text-indigo-400">${s.count}</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div class="bg-indigo-500 h-full rounded-full" style="width: ${Math.min(100, s.conversion_percentage || 0)}%"></div>
+          </div>
+          <div class="flex justify-end text-[10px] text-slate-500 font-mono">
+            ${s.conversion_percentage || 0}% conversão
+          </div>
+        `;
+        funnelContainer.appendChild(stepDiv);
+      });
+
+      // Events Feed vs Empty State
+      const events = a.recent_events || [];
+      const emptyStateEl = document.getElementById('analytics-empty-state');
+      const tableWrapper = document.getElementById('analytics-events-table-wrapper');
+      const countBadge = document.getElementById('events-count-badge');
+      const tbody = document.getElementById('analytics-events-tbody');
+
+      countBadge.innerText = `${events.length} eventos`;
+
+      if (events.length === 0) {
+        emptyStateEl.classList.remove('hidden');
+        tableWrapper.classList.add('hidden');
+      } else {
+        emptyStateEl.classList.add('hidden');
+        tableWrapper.classList.remove('hidden');
+        tbody.innerHTML = '';
+        events.forEach(evt => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-900/60 transition";
+          tr.innerHTML = `
+            <td class="py-2 px-3 text-indigo-400 font-bold">${evt.event || 'custom_event'}</td>
+            <td class="py-2 px-3 text-slate-300 text-[10px]">${JSON.stringify(evt.properties || evt)}</td>
+            <td class="py-2 px-3 text-slate-500 text-[10px]">${evt.timestamp ? new Date(evt.timestamp).toLocaleString('pt-BR') : 'Agora'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function openModal(task) {
+      document.getElementById('modal-id').innerText = task.id;
+      document.getElementById('modal-title').innerText = task.title;
+      document.getElementById('modal-desc').innerText = task.description;
+
+      const mObj = appState.milestones.find(m => m.id === task.milestone);
+      const milestoneEl = document.getElementById('modal-milestone');
+      if (milestoneEl) {
+        if (mObj) {
+          milestoneEl.innerText = mObj.title;
+          milestoneEl.classList.remove('hidden');
+        } else {
+          milestoneEl.classList.add('hidden');
+        }
+      }
+
+      const tierEl = document.getElementById('modal-tier');
+      tierEl.innerText = task.tier || 'tier2_fast';
+      tierEl.className = 'px-2 py-0.5 text-xs font-semibold rounded ' + 
+        (task.tier === 'tier1_frontier' ? 'bg-purple-500/20 text-purple-300' : 
+         task.tier === 'tier3_reviewer' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-blue-500/20 text-blue-300');
+
+      const statusEl = document.getElementById('modal-status');
+      statusEl.innerText = task.status;
+      statusEl.className = 'px-2 py-0.5 text-xs font-semibold rounded bg-slate-800 text-slate-300';
+
+      const indicatorsList = document.getElementById('modal-indicators');
+      indicatorsList.innerHTML = '';
+      if (task.indicators && task.indicators.length > 0) {
+        task.indicators.forEach(ind => {
+          const li = document.createElement('li');
+          li.className = 'flex items-start space-x-2';
+          li.innerHTML = `<span class="text-indigo-400 font-bold">›</span><span>${ind}</span>`;
+          indicatorsList.appendChild(li);
+        });
+      } else {
+        indicatorsList.innerHTML = '<li class="text-slate-500 italic">Nenhum indicador explícito cadastrado.</li>';
+      }
+
+      document.getElementById('modal-created').innerText = `Criada em: ${task.created_at || 'N/A'}`;
+      const auditEl = document.getElementById('modal-audit-badge');
+      auditEl.innerText = task.audit_confirmed ? '✓ Auditoria Concluída' : '⏳ Auditoria Pendente';
+      auditEl.className = task.audit_confirmed ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold';
+
+      document.getElementById('task-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('task-modal').classList.add('hidden');
+    }
+
+    function setTierFilter(tier) {
+      appState.currentTierFilter = tier;
+      document.querySelectorAll('.tier-filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-tier') === tier) {
+          btn.className = 'tier-filter-btn px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium transition';
+        } else {
+          btn.className = 'tier-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+        }
+      });
+      renderTasksView();
+    }
+
+    function filterCards() {
+      appState.searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+      renderTasksView();
+    }
+
+    // Inicialização ao carregar página
+    window.addEventListener('DOMContentLoaded', loadAllData);
+  </script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+================================================================================
+FRAMEWORK DE DESENVOLVIMENTO & ORQUESTRAÇÃO COM IA
+REGRAS MESTRAS, PRINCÍPIOS E FLUXOS OPERACIONAIS EM TÓPICOS
+================================================================================
+Arquivo: REGRAS_E_FLUXOS.txt
+Compatibilidade: Google Antigravity, OpenAI Codex, Cursor, Claude Code
+Última Atualização: 2026-09-25
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PERFIL DO CRIADOR & DIRETRIZES COGNITIVAS (BRUNO)
+--------------------------------------------------------------------------------
+• Origem Multidisciplinar:
+  - Quadrinista profissional: pensamento visual, narrativo e estrutural.
+  - Formação jurídica em Direito: rigor conceitual, conformidade, regras claras.
+  - Ex-analista de negócios do Sebrae com startups: validação de produto, unit economics, canais e growth.
+• Perfil Não-Desenvolvedor Tradicional:
+  - Não assumir jargões técnicos de baixo nível.
+  - Sempre que conveniente, traduzir conceitos complexos usando analogias visuais ou de negócios.
+• Perfil Neurodivergente (TDAH):
+  - Sobrecarga Zero: proibidas paredes de texto caóticas ou comandos múltiplos misturados.
+  - Apresentação Executiva: entregar sempre resumos consolidados, claros e estruturados.
+  - Acompanhamento Visual: toda evolução de tarefas e métricas deve ser refletida no dashboard.html.
+  - Orientações "Clique a Clique": para tarefas manuais externas, fornecer roteiro minucioso de onde clicar.
+
+
+--------------------------------------------------------------------------------
+2. OS 21 PRINCÍPIOS FUNDAMENTAIS DE DESENVOLVIMENTO COM IA
+--------------------------------------------------------------------------------
+• Princípio 01: Listar e usar CLIs, MCPs, /browser e subagentes disponíveis para configurar tudo sem vazar dados sensíveis. Chamar o usuário apenas para dados sensíveis.
+• Princípio 02: Criar dashboard de acompanhamento e análise de dados do app e dos usuários.
+• Princípio 03: Manter arquivos e pastas sempre rigorosamente organizados e limpos.
+• Princípio 04: Registrar e catalogar dados de uso do projeto/app para análise e growth hacking real.
+• Princípio 05: Criar tarefas (tasks) com metas claras e indicadores para revisão, auditoria e confirmação da entrega.
+• Princípio 06: Manter plataforma visual (em HTML), atualizada em tempo real, mostrando tarefas e status de desenvolvimento/entrega.
+• Princípio 07: Respeitar o perfil do criador (quadrinista, formado em Direito, analista Sebrae/startups, não dev de formação).
+• Princípio 08: Adaptar para TDAH: acompanhamento visual, uma coisa de cada vez, instruções claras e detalhadas sem desorientação.
+• Princípio 09: Configurar formas de monetização nacional (Pix/BRL) e internacional (Stripe/USD).
+• Princípio 10: Tudo o que a IA puder desenvolver, fazer e configurar pelo usuário, faça de forma autônoma (sem vazar dados sensíveis).
+• Princípio 11: Sempre que importante, revisar a estrutura do projeto para organização e/ou reestruturação quando indicado.
+• Princípio 12: Sempre que possível, organizar e atualizar documentações, arquivos e pastas do projeto.
+• Princípio 13: Sempre orientar sobre configurações de secrets, APIs, tokens, keys e credenciais com protocolo seguro.
+• Princípio 14: Manter informações de deploy, branch, PR, commit e checklist Go/No-Go sempre organizadas e previstas.
+• Princípio 15: No Antigravity, estimular /grill-me e /plan para questionar e planejar decisões; no Codex, aplicar o mesmo método.
+• Princípio 16: Facilitar a compreensão de pontos específicos e gerais do projeto sempre que conveniente.
+• Princípio 17: Planejar e criar estrutura conceitual com modelos de ponta (Tier 1); executar com modelos leves (Tier 2); revisar com modelos médios (Tier 3).
+• Princípio 18: Fornecer instruções claras de como orquestrar o desenvolvimento do projeto.
+• Princípio 19: Sempre criar os documentos mestres: Business Model Canvas, Tech Stack, PRD, Resumo em 1 parágrafo e Modelo Financeiro.
+• Princípio 20: Sempre que o usuário precisar configurar algo manualmente, criar orientações completas de onde clicar em cada plataforma.
+• Princípio 21: Sempre que puder configurar com CLI, MCP ou browser, faça autonomamente, exceto para dados sensíveis.
+
+
+--------------------------------------------------------------------------------
+3. O FLUXO DOS 5 MARCOS SEQUENCIAIS (MILESTONE BATCHING)
+--------------------------------------------------------------------------------
+• Regra Anti-Megalomania:
+  - Proibido tentar gerar documentação, banco, backend e frontend em uma única interação.
+  - O desenvolvimento deve avançar obrigatoriamente marco a marco, em lotes fechados.
+
+• MARCO 1: Fundação, Narrativa & Planejamento Sistêmico
+  - Etapa 1.0: Entrevista /grill-me (1 pergunta por vez) para fechar docs/NARRATIVE_STORYTELLING.md.
+  - Etapa 1.1: Git init + criação imediata do repositório remoto privado via GitHub CLI:
+               gh repo create <nome> --private --source=. --remote=origin --push
+  - Etapa 1.2: Canvas da Proposta de Valor (docs/VALUE_PROPOSITION_CANVAS.md) com fit estrito 1:1:
+               toda dor tem aliviador e todo ganho tem criador; nenhuma feature sem dor/ganho.
+  - Etapa 1.3: Business Model Canvas Sistêmico (docs/BUSINESS_MODEL_CANVAS.md):
+               entrevista guiada passo a passo (8 perguntas);
+               relacionamento Antes/Durante/Depois amarrado a canais;
+               desdobramento compulsório de 100% dos compromissos em Atividades Principais;
+               mapeamento de Atividades para Recursos;
+               deslocamento de Atividades/Recursos para Parcerias Estratégicas;
+               estrutura de custos derivada de recursos e parcerias.
+  - Etapa 1.4: PRD.md (requisitos derivados das Atividades Principais), TECH_STACK.md,
+               FINANCIAL_MODEL.md, SUMMARY.md e população inicial do tasks.json.
+  - Checkpoint 1 (Parada Obrigatória): Emissão do Resumo Executivo + Pergunta de autorização.
+
+• MARCO 2: Design UI/UX, Direção de Arte & Imagens
+  - Criação do docs/DESIGN_SYSTEM_STITCH.md a partir do template.
+  - Prompt estruturado de alta fidelidade para Google Stitch (ou MCP Stitch).
+  - Direção de Arte Unificada para ativos visuais:
+    * Assinatura visual única (estilo de render, paleta e iluminação fixa).
+    * Fórmula canônica de prompt: [Sujeito] + [Ambiente] + [Estilo] + [Luz] + [Tokens] + [Parâmetros].
+    * Geração nativa via generate_image ou prompts para ferramentas externas (Midjourney/Flux).
+  - Proibido codificar frontend às cegas sem aprovação visual prévia.
+  - Checkpoint 2 (Parada Obrigatória): Validação estética no Stitch e ativos aprovados.
+
+• MARCO 3: Backend Core, Contratos de API & Testes
+  - Provisionamento de ambiente com Python + uv + FastAPI + Pydantic.
+  - Implementação de modelos de dados, rotas mínimas e contratos REST/SSE.
+  - Execução obrigatória de testes automatizados com sucesso no terminal.
+  - Validação da documentação interativa Swagger (/docs).
+  - Checkpoint 3 (Parada Obrigatória): 100% de testes verdes no terminal.
+
+• MARCO 4: Frontend UI & Integração
+  - Construção da interface (Tailwind CSS) espelhando fielmente o Stitch e Direção de Arte.
+  - Conexão de ponta a ponta consumindo a API real do backend (sem mocks).
+  - Verificação de ausência de erros no console do navegador e sem quebra de layout.
+  - Checkpoint 4 (Parada Obrigatória): Aplicação integrada, funcional e navegável.
+
+• MARCO 5: Auditoria Tier 3, Métricas & Go-to-Market
+  - Auditoria estrita de cada tarefa contra os indicators do tasks.json (audit_confirmed: true).
+  - Configuração de telemetria real em analytics.json e analytics_data.js.
+  - Cartão de Configuração Guiada para gateways de pagamento (Pix/Stripe) e variáveis sensíveis.
+  - Execução do Git Playbook (commits semânticos, branch, PR e checklist Go/No-Go).
+  - Checkpoint 5 (Parada Obrigatória): Entrega final consolidada no dashboard.html.
+
+• Regra de Ouro do Checkpoint:
+  - Autonomia máxima da IA dentro do marco ativo.
+  - Parada obrigatória ao concluir o marco: atualizar tasks.json/tasks_data.js e emitir Resumo Executivo.
+  - Pergunta padrão de encerramento: "Podemos iniciar o Marco X?"
+  - Proibido iniciar tarefas do marco seguinte sem aprovação explícita do Bruno.
+
+
+--------------------------------------------------------------------------------
+4. ROTEIROS DE ENTREVISTA PASSO A PASSO (/grill-me)
+--------------------------------------------------------------------------------
+• Regra de Condução:
+  - A IA conduz as entrevistas UMA PERGUNTA POR VEZ.
+  - Acolhe respostas curtas em texto ou transcrições de áudio.
+
+• ROTEIRO 1: NARRATIVA DO PROJETO & TESE (docs/NARRATIVE_STORYTELLING.md)
+  1. Pergunta 1 (Contexto & Usuário): "Quem é a pessoa que vai usar isso no dia a dia? Qual é a função, o trabalho ou o cenário real dela?"
+  2. Pergunta 2 (O Gargalo Real): "Qual é a dor concreta ou a maior trava que ela enfrenta hoje nessa rotina? Onde o processo engargala?"
+  3. Pergunta 3 (A Solução Prática): "Qual é a sua ideia para resolver isso? O que o produto vai fazer na prática para destravar essa situação?"
+  4. Pergunta 4 (O Resultado Real): "Depois que a pessoa começa a usar, qual é a melhora prática e concreta na rotina dela?"
+  5. Pergunta 5 (Tom & Posicionamento): "Qual é a vibe ou o tom desse projeto? Ele deve soar mais ágil e minimalista, executivo, informal ou algo diferente?"
+
+• ROTEIRO 2: CANVAS DA PROPOSTA DE VALOR (docs/VALUE_PROPOSITION_CANVAS.md)
+  1. Tarefas: "O que o seu usuário está tentando fazer na prática quando busca uma solução como essa?"
+  2. Dores: "Quais são as 3 maiores dores ou frustrações que ele tem fazendo isso hoje sem o seu produto?"
+  3. Alívio: "Para cada uma dessas 3 dores, o que o seu produto faz especificamente para eliminar o atrito?"
+  4. Ganhos: "Qual é o grande resultado ou alívio que faz o cliente sentir que o produto valeu cada centavo?"
+  5. Criador: "Como o seu produto entrega e deixa evidente esse ganho na tela?"
+
+• ROTEIRO 3: BUSINESS MODEL CANVAS SISTÊMICO (docs/BUSINESS_MODEL_CANVAS.md)
+  1. Segmento & Momento: "Quem é o cliente pioneiro (Beachhead) que mais sente essa dor hoje e em qual momento exato da rotina dele ele decide que precisa pagar por uma solução?"
+  2. Oferta & Moat: "Importando os aliviadores do Canvas de Proposta de Valor: qual é a nossa oferta central tangível e o que nos protege de sermos copiados em duas semanas?"
+  3. Relacionamento Antes x Canais: "Antes da venda (atração e prova): o que faremos para o cliente em potencial nos descobrir, entender a proposta e confiar na solução? Por qual canal específico essa atração e demonstração vão acontecer?"
+  4. Relacionamento Durante x Canais: "Durante a venda (checkout e onboarding): como será a experiência de compra sem fricção e como garantimos que o cliente tenha o seu primeiro momento de valor ('Aha Moment') logo após o pagamento? Por quais canais?"
+  5. Relacionamento Depois x Canais: "Depois da venda (suporte, retenção e referral): como vamos prestar suporte rápido, manter o cliente engajado no longo prazo e incentivá-lo a indicar novos usuários? Por quais canais?"
+  6. Monetização Dupla: "Como a cobrança vai funcionar na prática? Teremos precificação dupla (Pix/Cartão no Brasil e Stripe Checkout em Dólares para o exterior)? Os planos serão mensais, anuais ou transacionais?"
+  7. A Virada Operacional (Atividades Compulsórias): "Agora aplicamos a Lei do Desdobramento: olhando para a Proposta de Valor, a jornada Antes/Durante/Depois, os Canais e o Checkout, quais são as atividades operacionais concretas que nossa equipe ou sistema tem que executar no dia a dia para honrar todas essas promessas?"
+  8. Recursos, Parcerias & Custos: "Para rodar essas atividades operacionais: quais recursos são indispensáveis (pessoas, infraestrutura, modelos de IA)? Quais dessas tarefas nós NÃO faremos do zero e delegaremos para parceiros/APIs (ex: Stripe, Resend, Gemini)? E quais os principais custos fixos e variáveis que isso gera?"
+
+
+--------------------------------------------------------------------------------
+5. ORQUESTRAÇÃO MULTI-MODELO EM 3 TIERS
+--------------------------------------------------------------------------------
+• Tier 1: Modelos de Ponta / Frontier (Gemini Pro, Claude 3.5 Sonnet/Opus, GPT-4o)
+  - Atribuições: Arquitetura conceitual, planejamento (/plan), condução de /grill-me, PRD, redação de contratos e tarefas no tasks.json.
+• Tier 2: Modelos Leves / Fast (Gemini Flash, Haiku, GPT-4o-mini)
+  - Atribuições: Execução massiva em lote, geração de código, implementação de componentes, criação de testes e scripts.
+  - Disparado autonomamente via invoke_subagent com Model: 'flash'.
+• Tier 3: Modelos Médios / Reviewers
+  - Atribuições: Revisão estrita de código, auditoria contra indicators do tasks.json, checagem de conformidade com os 21 princípios e emissão de audit_confirmed: true.
+
+
+--------------------------------------------------------------------------------
+6. REGRAS DE ARQUITETURA & DECISÃO DE STACK
+--------------------------------------------------------------------------------
+• Padrão Prioritário do Framework:
+  - Frontend desacoplado: Next.js / React / Tailwind CSS.
+  - Backend desacoplado: Python com FastAPI + Pydantic + Uvicorn, gerenciado por uv.
+• Proibição de Troca Arbitrária:
+  - A IA é proibida de substituir o backend Python silenciosamente.
+• Cartão Executivo de Decisão de Stack:
+  - Se Python não for a melhor escolha (ex: app estático, MVP de tela única, Serverless Workers), a IA deve pausar e emitir o cartão comparativo contendo:
+    * Projeto
+    * Opção Padrão (Python FastAPI)
+    * Alternativa Proposta (ex: Next.js Fullstack)
+    * Motivo da Avaliação (em linguagem de negócios sem hermetismo)
+    * Tabela comparando Custo de Hospedagem, Complexidade de Manutenção e Poder de IA
+    * Recomendação Objetiva da IA
+    * Pergunta de Decisão para o Bruno aprovar ou manter Python
+
+
+--------------------------------------------------------------------------------
+7. CICLO ATIVO DE PROVISIONAMENTO, CLIs, MCPs & GITHUB
+--------------------------------------------------------------------------------
+• Passo 1 (Mapeamento): Mapear ferramentas requeridas pela stack (git, gh, python, uv, node, supabase, stripe).
+• Passo 2 (Diagnóstico Silencioso): Testar no terminal via Get-Command ou --version sem travar o chat.
+• Passo 3 (Instalação Autônoma Silenciosa):
+  - Windows: winget install --id <ID> -e --silent ou scoop install <app>.
+  - Python: uv instalado via script oficial/PowerShell.
+  - Node: npm install -g ou npm install local.
+• Passo 4 (Versionamento Obrigatório no GitHub via CLI desde o Minuto Zero):
+  - No Marco 1, rodar imediatamente:
+    git init
+    git add .
+    git commit -m "feat: marco 1 - fundacao, narrativa e planejamento inicial"
+    gh repo create <nome-do-repositorio> --private --source=. --remote=origin --push
+• Passo 5 (Autenticação Segura Assistida):
+  - Login web OAuth (ex: gh auth login --web, supabase login, stripe login): disparar e orientar o Bruno com instruções e código de pareamento.
+  - Credenciais sensíveis (chaves/tokens): emitir Cartão de Configuração Guiada para preenchimento no .env local.
+• Passo 6 (Descoberta e Ativação de MCPs):
+  - Mapear MCPs úteis (stitch, filesystem, postgres, github) e fornecer snippet JSON pronto para colar na IDE.
+
+
+--------------------------------------------------------------------------------
+8. PROTOCOLO DE SEGURANÇA & GESTÃO DE SEGREDOS
+--------------------------------------------------------------------------------
+• Lei Fundamental: Jamais comitar, exibir em logs abertos ou pedir senhas/tokens no chat.
+• Cartão de Configuração Guiada (Obrigatório para segredos):
+  - Plataforma: [Nome]
+  - URL Direta: [Link exato da tela de API Keys]
+  - Passo a Passo de Acesso:
+    1. Acesse o link e faça login.
+    2. Clique no menu/botão específico.
+    3. Crie a chave com permissão requerida e copie.
+  - Onde Salvar:
+    * Abrir .env local na raiz (ou backend/.env).
+    * Adicionar: VARIAVEL=sua_chave_aqui
+  - Comando de Teste: [Comando seguro sem exposição de valor]
+• O arquivo .env deve constar compulsoriamente no .gitignore.
+
+
+--------------------------------------------------------------------------------
+9. PLATAFORMA VISUAL INTEGRADA & GESTÃO DE DADOS (DASHBOARD)
+--------------------------------------------------------------------------------
+• Aba 1: Sprint & Tarefas de Desenvolvimento (tasks.json)
+  - Kanban com 4 colunas: Backlog, Em Desenvolvimento, Em Revisão/Auditoria, Concluído.
+  - Stepper horizontal dos 5 Marcos indicando percentual de avanço de cada fase.
+  - Campos de cada tarefa: id, title, description, status, milestone, tier, indicators, audit_confirmed.
+• Aba 2: Métricas do Produto & Growth (analytics.json)
+  - Indicadores: DAU/MAU, MRR (BRL e USD), Funil de Conversão e Eventos de telemetria.
+  - Regra de Dados Reais: Proibido exibir dados fictícios; exibir Empty State explicativo quando zerado.
+• Solução de Leitura sem Bloqueio de CORS no Windows:
+  - 1. Regra de Sincronização Dupla: toda atualização em tasks.json gera tasks_data.js (window.__TASKS_DATA__); toda atualização em analytics.json gera analytics_data.js.
+  - 2. Inicializador de 1 clique: abrir_dashboard.bat inicia servidor local Python e abre navegador sem restrições.
+  - 3. Fallback Drag & Drop: dashboard.html suporta arrastar o arquivo tasks.json diretamente para a tela.
+
+
+--------------------------------------------------------------------------------
+10. PADRÕES DE DOCUMENTAÇÃO, SUITE DE TEMPLATES & HIGIENE
+--------------------------------------------------------------------------------
+• Arquivo Mestre Canônico:
+  - AGENTS.md na raiz em letras maiúsculas é a diretriz suprema.
+• Suite de Documentos Padronizados (templates/ e docs/):
+  - NARRATIVE_STORYTELLING.md: Contexto, dor concreta, tese da solução, impacto prático e tom.
+  - VALUE_PROPOSITION_CANVAS.md: Dores x Aliviadores e Ganhos x Criadores (Fit estrito 1:1).
+  - BUSINESS_MODEL_CANVAS.md: Cascata sistêmica (Jornada Antes/Durante/Depois, Canais, Atividades, Recursos, Parcerias e Custos).
+  - PRD.md: Requisitos funcionais derivados das Atividades Principais e catálogo de telemetria.
+  - DESIGN_SYSTEM_STITCH.md: Identidade visual, tokens, Direção de Arte e prompts do Stitch.
+  - TECH_STACK.md: Arquitetura desacoplada, matriz de CLIs e MCPs.
+  - FINANCIAL_MODEL.md: Monetização dupla (Pix BRL / Stripe USD), custos e unit economics.
+  - SUMMARY.md: Resumo executivo em 1 parágrafo (Elevator Pitch).
+  - DEPLOYMENT_GIT_PLAYBOOK.md: Padrão de branches, commits semânticos e checklist Go/No-Go.
+• Higiene Estrutural:
+  - Raiz limpa e modular (frontend/, backend/, docs/, tests/, scripts/, public/).
+  - Proibido finalizar mudanças estruturais de código sem atualizar a documentação correspondente.
+
+
+--------------------------------------------------------------------------------
+11. CHECKLIST FINAL DA IA ANTES DE CONCLUIR QUALQUER TAREFA
+--------------------------------------------------------------------------------
+[ ] A entrevista de Narrativa foi conduzida passo a passo e salva em docs/NARRATIVE_STORYTELLING.md?
+[ ] O repositório Git local e o GitHub remoto privado via CLI (gh repo create) foram criados no Marco 1?
+[ ] O Canvas de Proposta de Valor possui amarração 1:1 estrita (sem features sem dor correspondente)?
+[ ] O Business Model Canvas foi preenchido via entrevista guiada com a cascata sistêmica completa?
+[ ] Os requisitos funcionais do PRD derivam compulsoriamente das Atividades Principais do Canvas?
+[ ] O desenvolvimento respeitou a divisão estrita por Marcos (sem afobação em turno único)?
+[ ] O ponto de parada (checkpoint) foi respeitado ao final do marco com Resumo Executivo emitido?
+[ ] O design no Google Stitch e a Direção de Arte unificada foram validados antes do frontend?
+[ ] O backend seguiu o padrão em Python (ou emitiu o Cartão de Decisão formalmente)?
+[ ] As CLIs e dependências foram verificadas e provisionadas de forma autônoma no PATH?
+[ ] A tarefa foi executada sem expor senhas, tokens ou dados sensíveis?
+[ ] tasks.json e o espelho tasks_data.js foram atualizados em tempo real?
+[ ] O dashboard.html reflete o progresso real dos marcos e tarefas?
+[ ] A resposta ao Bruno é executiva, direta, visual e sem sobrecarga cognitiva (TDAH)?
+================================================================================
+FIM DO DOCUMENTO — REGRAS_E_FLUXOS.txt
+================================================================================
