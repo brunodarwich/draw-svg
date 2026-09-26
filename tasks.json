@@ -6,8 +6,8 @@
     "last_updated": "2026-09-26",
     "metrics": {
       "total_tasks": 5,
-      "completed_tasks": 1,
-      "progress_percentage": 20
+      "completed_tasks": 2,
+      "progress_percentage": 40
     }
   },
   "milestones": [
@@ -46,17 +46,17 @@
       "id": "TASK-002",
       "title": "Design UI/UX no Stitch e Direção de Arte Visual",
       "description": "Elaboração do docs/DESIGN_SYSTEM_STITCH.md, especificações de telas (Studio, Camadas, Inspetor SVG e Galeria), prompts do Stitch e ativos visuais unificados.",
-      "status": "todo",
+      "status": "done",
       "milestone": "m2_design_arte",
       "tier": "tier1_frontier",
       "indicators": [
         "DESIGN_SYSTEM_STITCH.md estruturado com paleta dark minimalista e ergonomia para TDAH",
         "Prompt de alta fidelidade para o Google Stitch estruturado",
-        "Direção de Arte definida para ícones e identidade do estúdio"
+        "Direção de Arte definida e ativos visuais gerados com coerência estilística unificada (logo, empty state e banner)"
       ],
-      "audit_confirmed": false,
+      "audit_confirmed": true,
       "created_at": "2026-09-26",
-      "completed_at": null
+      "completed_at": "2026-09-26"
     },
     {
       "id": "TASK-003",
