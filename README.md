@@ -1,12 +1,20 @@
 # DrawSVG Studio
 
-**Modelo de interface concluído e revisado.** As quatro telas navegáveis estão em [`frontend/`](frontend/): estúdio de desenho, inspetor SVG, camadas e galeria. A marca usada na interface é a versão escolhida pelo Bruno em `public/assets/images/logo-preferred.svg`.
+> **Status do Projeto**: 100% Concluído (Marcos 1 a 5 entregues)  
+> **Deploy Público (GitHub Pages)**: [https://brunodarwich.github.io/draw-svg/](https://brunodarwich.github.io/draw-svg/)  
+> **Repositório**: [https://github.com/brunodarwich/draw-svg](https://github.com/brunodarwich/draw-svg)
 
-## Abrir o aplicativo
+O **DrawSVG Studio** é um estúdio web de desenho e pintura vetorial direto no navegador, focado na produtividade de quadrinistas, criadores visuais e desenvolvedores web. Gera e inspeciona código SVG limpo e semântico em tempo real, com interpolação Bézier contínua, simplificação de traços Ramer-Douglas-Peucker (RDP), gerenciamento de camadas e persistência visual local em IndexedDB.
 
-No terminal, dentro da pasta `frontend/`, execute `npm install` uma vez e depois `npm run dev`. Abra o endereço exibido pelo Vite (normalmente `http://127.0.0.1:5173/`). Para gerar a versão estática de produção, execute `npm run build`.
+## Execução Local
 
-O modelo já permite desenhar traços SVG, mover ou apagar traços, preencher formas fechadas, usar histórico, editar camadas, copiar/exportar SVG e PNG e salvar desenhos na galeria local do navegador. A engine vetorial avançada e sua auditoria de desempenho seguem como trabalho do Marco 3; por isso a integração completa do Marco 4 permanece em desenvolvimento no painel de tarefas.
+No terminal, dentro da pasta `frontend/`:
+```bash
+npm install
+npm test      # Executa a suite de testes unitários da engine matemática
+npm run dev   # Inicia o servidor local de desenvolvimento (http://127.0.0.1:5173/)
+npm run build # Gera o pacote otimizado de produção em frontend/dist/
+```
 
 ---
 
