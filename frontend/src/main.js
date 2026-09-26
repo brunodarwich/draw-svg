@@ -106,6 +106,7 @@ const s = {
   drawing: false,
   points: [],
   path: null,
+  pointerId: null,
   selection: null,
   active: "layer-1",
   history: [],
@@ -295,39 +296,48 @@ function applySnapshot(xml) {
   refreshCode();
   empty();
 }
-function ensureLayerMask(layerId) {
+function createEraserMask(layerId) {
+  const layer = $(`#${CSS.escape(layerId)}`);
+  if (!layer || !layer.querySelector("[data-draw-id]")) return null;
   let defsEl = $("#artboard-defs");
   if (!defsEl) {
     defsEl = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defsEl.id = "artboard-defs";
     svg.prepend(defsEl);
   }
-  const maskId = `mask-${layerId}`;
-  let mask = defsEl.querySelector(`#${CSS.escape(maskId)}`);
-  if (!mask) {
-    mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
-    mask.id = maskId;
-    mask.setAttribute("maskUnits", "userSpaceOnUse");
-    mask.setAttribute("x", "0");
-    mask.setAttribute("y", "0");
-    mask.setAttribute("width", s.w);
-    mask.setAttribute("height", s.h);
+  const mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
+  mask.id = `mask-${crypto.randomUUID()}`;
+  mask.setAttribute("maskUnits", "userSpaceOnUse");
+  mask.setAttribute("maskContentUnits", "userSpaceOnUse");
+  mask.setAttribute("mask-type", "luminance");
+  mask.setAttribute("x", "0");
+  mask.setAttribute("y", "0");
+  mask.setAttribute("width", s.w);
+  mask.setAttribute("height", s.h);
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("width", s.w);
+  rect.setAttribute("height", s.h);
+  rect.setAttribute("fill", "white");
+  mask.append(rect);
+  defsEl.append(mask);
 
-    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    rect.setAttribute("x", "0");
-    rect.setAttribute("y", "0");
-    rect.setAttribute("width", "100%");
-    rect.setAttribute("height", "100%");
-    rect.setAttribute("fill", "white");
-    mask.append(rect);
-    defsEl.append(mask);
+  // A máscara envolve somente os elementos que já existiam nesta passada.
+  // Novos traços ficam fora dela e podem repintar a área apagada.
+  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  group.setAttribute("mask", `url(#${mask.id})`);
+  const previousMask = layer.getAttribute("mask");
+  if (previousMask) {
+    const previousGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    previousGroup.setAttribute("mask", previousMask);
+    while (layer.firstChild) previousGroup.append(layer.firstChild);
+    group.append(previousGroup);
+    layer.removeAttribute("mask");
+    const info = layers.find((item) => item.id === layerId);
+    if (info) info.mask = "";
+  } else {
+    while (layer.firstChild) group.append(layer.firstChild);
   }
-  const g = $(`#${CSS.escape(layerId)}`);
-  if (g && !g.getAttribute("mask")) {
-    g.setAttribute("mask", `url(#${maskId})`);
-  }
-  const l = layers.find((x) => x.id === layerId);
-  if (l) l.mask = `url(#${maskId})`;
+  layer.append(group);
   return mask;
 }
 function clearSelection() {
@@ -415,7 +425,7 @@ svg.addEventListener("pointerdown", (e) => {
   if (e.button !== 0) return;
   let target = e.target.closest("[data-draw-id]"),
     targetLayer =
-      target && layers.find((l) => l.id === target.parentElement?.id),
+      target && layers.find((l) => l.id === target.closest("#layers-root > g")?.id),
     editable = targetLayer && !targetLayer.locked && targetLayer.visible;
 
   if (s.tool === "select") {
@@ -449,21 +459,20 @@ svg.addEventListener("pointerdown", (e) => {
   }
 
   if (s.tool === "eraser") {
-    const mask = ensureLayerMask(s.active);
+    const mask = createEraserMask(s.active);
     if (!mask) return;
 
     s.drawing = true;
+    s.pointerId = e.pointerId;
     s.points = [pt(e)];
     let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    p.dataset.drawId = crypto.randomUUID();
     p.dataset.type = "eraser-stroke";
-    p.setAttribute("d", pointsToPathD(s.points, false, 1));
+    p.setAttribute("d", eraserPathD(s.points));
     p.setAttribute("fill", "none");
     p.setAttribute("stroke", "black");
     p.setAttribute("stroke-width", s.width);
     p.setAttribute("stroke-linecap", "round");
     p.setAttribute("stroke-linejoin", "round");
-    p.setAttribute("vector-effect", "non-scaling-stroke");
     s.path = p;
     mask.append(p);
     svg.setPointerCapture(e.pointerId);
@@ -507,7 +516,7 @@ svg.addEventListener("pointerdown", (e) => {
       return toast("Clique dentro de uma forma ou sobre um traço para preencher.");
     }
 
-    const ftLayer = layers.find((ly) => ly.id === fillTarget.parentElement?.id);
+    const ftLayer = layers.find((ly) => ly.id === fillTarget.closest("#layers-root > g")?.id);
     if (!ftLayer || ftLayer.locked || !ftLayer.visible) {
       return toast("Essa forma está em uma camada bloqueada ou oculta.");
     }
@@ -527,6 +536,7 @@ svg.addEventListener("pointerdown", (e) => {
   }
 
   s.drawing = true;
+  s.pointerId = e.pointerId;
   s.points = [pt(e)];
   let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
   p.dataset.drawId = crypto.randomUUID();
@@ -542,6 +552,7 @@ svg.addEventListener("pointerdown", (e) => {
   svg.setPointerCapture(e.pointerId);
 });
 svg.addEventListener("pointermove", (e) => {
+  if (s.pointerId !== null && e.pointerId !== s.pointerId) return;
   if (s.selection && s.selection.start && s.selection.elements?.length) {
     let p = pt(e),
       dx = p.x - s.selection.start.x,
@@ -564,11 +575,20 @@ svg.addEventListener("pointermove", (e) => {
       s.points.push(p);
     }
   }
-  s.path.setAttribute("d", pointsToPathD(s.points, false, 1));
+  s.path.setAttribute("d", s.tool === "eraser" ? eraserPathD(s.points) : pointsToPathD(s.points, false, 1));
   refreshCode();
   empty();
 });
-function finish() {
+function eraserPathD(points) {
+  if (points.length === 1) {
+    const { x, y } = points[0];
+    return `M ${x.toFixed(2)} ${y.toFixed(2)} L ${(x + 0.01).toFixed(2)} ${y.toFixed(2)}`;
+  }
+  return pointsToPathD(points, false, 1);
+}
+function finish(e) {
+  if (e && s.pointerId !== null && e.pointerId !== s.pointerId) return;
+  s.pointerId = null;
   if (s.selection && s.selection.start) {
     for (let item of s.selection.originals) {
       item.transform = item.el.getAttribute("transform") || "";
@@ -584,7 +604,7 @@ function finish() {
     const closed = isEraser ? false : isPathClosed(s.points, s.width);
     const epsilon = Math.max(0.6, s.width * 0.12);
     const simplified = simplifyRDP(s.points, epsilon);
-    s.path.setAttribute("d", pointsToPathD(simplified, closed, 1));
+    s.path.setAttribute("d", isEraser ? eraserPathD(simplified) : pointsToPathD(simplified, closed, 1));
     trackEvent(isEraser ? "eraser_stroke_completed" : "stroke_completed", {
       tool: s.tool,
       layer_id: s.active,
@@ -708,8 +728,17 @@ $("#layer-list").onclick = (e) => {
   } else if (a === "delete") {
     if (layers.length === 1) return toast("Mantenha pelo menos uma camada.");
     $(`#${CSS.escape(l.id)}`).remove();
-    const mask = $(`#mask-${CSS.escape(l.id)}`);
-    if (mask) mask.remove();
+    const defsEl = $("#artboard-defs");
+    if (defsEl) {
+      const usedMaskIds = new Set(
+        [...root.querySelectorAll("[mask]")]
+          .map((node) => node.getAttribute("mask")?.match(/^url\(#(.+)\)$/)?.[1])
+          .filter(Boolean),
+      );
+      defsEl.querySelectorAll("mask").forEach((mask) => {
+        if (!usedMaskIds.has(mask.id)) mask.remove();
+      });
+    }
     layers = layers.filter((x) => x.id !== l.id);
     if (s.active === l.id) s.active = layers.at(-1).id;
     clearSelection();

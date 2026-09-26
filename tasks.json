@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "last_updated": "2026-09-26",
     "metrics": {
-      "total_tasks": 7,
-      "completed_tasks": 7,
+      "total_tasks": 8,
+      "completed_tasks": 8,
       "progress_percentage": 100
     }
   },
@@ -139,6 +139,23 @@
         "Atalho Ctrl+A e botão 'Sel. Tudo' destacam elementos e permitem mover ou deletar em conjunto",
         "Botões subir/descer em cada camada e drag-and-drop reorganizam a ordem no DOM SVG em tempo real",
         "Suíte de testes de geometria e serialização aprovada com 9/9 testes e build de produção validado"
+      ],
+      "audit_confirmed": true,
+      "created_at": "2026-09-26",
+      "completed_at": "2026-09-26"
+    },
+    {
+      "id": "TASK-008",
+      "title": "Corrigir comportamento da borracha vetorial",
+      "description": "Aplicar cada passada apenas ao conteúdo existente da camada ativa, permitir repintar a área apagada e apagar pontos com clique único.",
+      "status": "done",
+      "milestone": "m4_frontend_ui",
+      "tier": "tier3_reviewer",
+      "indicators": [
+        "Borracha abre lacuna no traço existente sem atingir traços desenhados depois",
+        "Clique único apaga um ponto e o tamanho acompanha a espessura selecionada",
+        "Desfazer e refazer preservam máscaras e traços; SVG exportado inclui a máscara",
+        "Suíte de 9 testes e build de produção aprovados; fluxo conferido no navegador"
       ],
       "audit_confirmed": true,
       "created_at": "2026-09-26",
