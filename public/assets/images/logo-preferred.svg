@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DrawSVG Studio</title>
+  <desc id="desc">Dois sinais de código unidos por um traço vetorial fluido com pontos azul e violeta.</desc>
+  <defs>
+    <linearGradient id="stroke" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0284c7"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="#38bdf8" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m143 139-82 77 82 77"/>
+    <path d="m371 139 82 77-82 77"/>
+  </g>
+  <path d="M153 318c83 19 91-46 110-109 19-65 55-92 102-80" fill="none" stroke="url(#stroke)" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="153" cy="318" r="25" fill="#0284c7"/>
+  <circle cx="365" cy="129" r="25" fill="#8b5cf6"/>
+  <text x="256" y="425" text-anchor="middle" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="750" letter-spacing="-2">DrawSVG</text>
+  <text x="256" y="468" text-anchor="middle" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500" letter-spacing="12">STUDIO</text>
+</svg>

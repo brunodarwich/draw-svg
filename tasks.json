@@ -5,9 +5,9 @@
     "version": "1.0.0",
     "last_updated": "2026-09-26",
     "metrics": {
-      "total_tasks": 5,
-      "completed_tasks": 2,
-      "progress_percentage": 40
+      "total_tasks": 6,
+      "completed_tasks": 5,
+      "progress_percentage": 83
     }
   },
   "milestones": [
@@ -52,7 +52,9 @@
       "indicators": [
         "DESIGN_SYSTEM_STITCH.md estruturado com paleta dark minimalista e ergonomia para TDAH",
         "Prompt de alta fidelidade para o Google Stitch estruturado",
-        "Direção de Arte definida e ativos visuais gerados com coerência estilística unificada (logo, empty state e banner)"
+        "Direção de Arte definida e ativos visuais gerados com coerência estilística unificada (logo, empty state e banner)",
+        "Logo oficial escolhida pelo Bruno em SVG editável e PNG transparente, com versão compacta para a interface",
+        "Quatro prévias visuais das telas do MVP geradas e reunidas em galeria de revisão"
       ],
       "audit_confirmed": true,
       "created_at": "2026-09-26",
@@ -62,7 +64,7 @@
       "id": "TASK-003",
       "title": "Motor de Desenho Vetorial Livre & Algoritmos de Suavização",
       "description": "Implementação da engine de captura de ponteiro a 60fps, interpolação suave de traços Bézier/Catmull-Rom, simplificação de caminhos Ramer-Douglas-Peucker e serialização para SVG limpo.",
-      "status": "todo",
+      "status": "done",
       "milestone": "m3_backend_core",
       "tier": "tier2_fast",
       "indicators": [
@@ -70,15 +72,15 @@
         "Geração de paths vetoriais enxutos com redução de pontos redundantes",
         "Testes automatizados dos algoritmos de geometria e serialização SVG aprovados"
       ],
-      "audit_confirmed": false,
+      "audit_confirmed": true,
       "created_at": "2026-09-26",
-      "completed_at": null
+      "completed_at": "2026-09-26"
     },
     {
       "id": "TASK-004",
       "title": "Frontend Studio UI: Camadas, Ferramentas, Inspetor e Galeria",
-      "description": "Construção da interface de estúdio completa: barra de ferramentas (pincel, borracha, balde, seleção, cor), gerenciador de camadas (<g>), inspetor de código SVG em tempo real com botão de copiar em 1 clique e galeria IndexedDB com cards visuais.",
-      "status": "todo",
+      "description": "Telas HTML/CSS/JS implementadas e integradas à engine vetorial: estúdio, ferramentas, inspetor SVG com análise em tempo real, camadas completas e galeria IndexedDB com telemetria.",
+      "status": "done",
       "milestone": "m4_frontend_ui",
       "tier": "tier2_fast",
       "indicators": [
@@ -87,9 +89,9 @@
         "Painel lateral de código SVG com sincronização reativa e cópia instantânea",
         "Galeria persistente no navegador salvando e carregando artes sem perda de dados"
       ],
-      "audit_confirmed": false,
+      "audit_confirmed": true,
       "created_at": "2026-09-26",
-      "completed_at": null
+      "completed_at": "2026-09-26"
     },
     {
       "id": "TASK-005",
@@ -106,6 +108,23 @@
       "audit_confirmed": false,
       "created_at": "2026-09-26",
       "completed_at": null
+    },
+    {
+      "id": "TASK-006",
+      "title": "Modelo HTML/CSS/JS das quatro telas",
+      "description": "Conversão das imagens de referência em interface navegável e responsiva para Estúdio, Inspetor SVG, Camadas e Galeria, usando a marca escolhida pelo Bruno.",
+      "status": "done",
+      "milestone": "m4_frontend_ui",
+      "tier": "tier2_fast",
+      "indicators": [
+        "Quatro estados visuais implementados em frontend/index.html, src/style.css e src/main.js",
+        "Inspetor inicia recolhido e alterna entre Código SVG e Camadas",
+        "Marca escolhida aplicada no cabeçalho e favicon; galeria usa dados reais do IndexedDB",
+        "Build Vite aprovado e navegação testada em desktop e celular de 390 px sem erro de console"
+      ],
+      "audit_confirmed": true,
+      "created_at": "2026-09-26",
+      "completed_at": "2026-09-26"
     }
   ]
 }

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DrawSVG Studio</title>
+  <desc id="desc">Um traço livre forma uma curva vetorial entre sinais de código.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M174 112 105 192l69 80" stroke="#38bdf8" stroke-width="24"/>
+    <path d="m338 112 69 80-69 80" stroke="#38bdf8" stroke-width="24"/>
+    <path d="M142 291c42-79 74 17 119-63 37-65 69-56 109-114" stroke="#0284c7" stroke-width="27"/>
+    <path d="M142 291c42-79 74 17 119-63 37-65 69-56 109-114" stroke="#38bdf8" stroke-width="12"/>
+  </g>
+  <path d="m131 303 12-29 16 17-28 12Z" fill="#8b5cf6"/>
+  <circle cx="261" cy="228" r="10" fill="#8b5cf6"/>
+  <circle cx="370" cy="114" r="10" fill="#8b5cf6"/>
+  <text x="256" y="404" text-anchor="middle" font-family="Inter, 'Plus Jakarta Sans', Arial, sans-serif" font-size="61" font-weight="700" letter-spacing="-2"><tspan fill="#f4f4f5">Draw</tspan><tspan fill="#38bdf8">SVG</tspan></text>
+  <text x="256" y="449" text-anchor="middle" font-family="Inter, 'Plus Jakarta Sans', Arial, sans-serif" font-size="24" font-weight="600" letter-spacing="12" fill="#a1a1aa">STUDIO</text>
+</svg>

@@ -1,0 +1,820 @@
+import "./style.css";
+import {
+  createIcons,
+  Brush,
+  Eraser,
+  PaintBucket,
+  MousePointer2,
+  Undo2,
+  Redo2,
+  Trash2,
+  Download,
+  Images,
+  ChevronDown,
+  ChevronRight,
+  Minus,
+  Plus,
+  Code2,
+  Layers3,
+  Copy,
+  FileCode2,
+  Image as ImageIcon,
+  LockKeyhole,
+  MoveVertical,
+  GripVertical,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+  X,
+  ImagePlus,
+  Check,
+  PanelLeft,
+  ExternalLink,
+  Trash,
+  Pencil,
+} from "lucide";
+import {
+  pointsToPathD,
+  simplifyRDP,
+  isPathClosed,
+} from "./engine/geometry.js";
+import {
+  serializeSvg,
+  analyzeSvg,
+  escapeXml,
+} from "./engine/serializer.js";
+import { trackEvent } from "./engine/telemetry.js";
+const $ = (s) => document.querySelector(s),
+  $$ = (s) => [...document.querySelectorAll(s)];
+const iconSet = {
+  Brush,
+  Eraser,
+  PaintBucket,
+  MousePointer2,
+  Undo2,
+  Redo2,
+  Trash2,
+  Download,
+  Images,
+  ChevronDown,
+  ChevronRight,
+  Minus,
+  Plus,
+  Code2,
+  Layers3,
+  Copy,
+  FileCode2,
+  Image: ImageIcon,
+  LockKeyhole,
+  MoveVertical,
+  GripVertical,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+  X,
+  ImagePlus,
+  Check,
+  PanelLeft,
+  ExternalLink,
+  Trash,
+  Pencil,
+};
+const drawIcons = (root) =>
+  createIcons({
+    icons: iconSet,
+    nameAttr: "data-icon",
+    attrs: { "stroke-width": 1.8 },
+    root,
+  });
+drawIcons();
+const svg = $("#artboard"),
+  root = $("#layers-root"),
+  wrap = $("#canvas-wrap");
+const s = {
+  w: 800,
+  h: 600,
+  zoom: 100,
+  tool: "brush",
+  color: "#0ea5e9",
+  width: 6,
+  drawing: false,
+  points: [],
+  path: null,
+  selection: null,
+  active: "layer-1",
+  history: [],
+  hi: -1,
+  drag: null,
+};
+let layers = [
+  { id: "layer-1", name: "Camada 1", visible: true, locked: false, opacity: 1 },
+];
+const initialLayer = document.createElementNS(
+  "http://www.w3.org/2000/svg",
+  "g",
+);
+initialLayer.id = "layer-1";
+root.append(initialLayer);
+const esc = (x) =>
+  String(x).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&apos;",
+      })[c],
+  );
+const dbOpen = () =>
+  new Promise((ok, no) => {
+    let r = indexedDB.open("drawsvg-studio", 1);
+    r.onupgradeneeded = () =>
+      r.result.createObjectStore("artworks", { keyPath: "id" });
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => no(r.error);
+  });
+async function dbAll() {
+  try {
+    let d = await dbOpen();
+    return await new Promise((ok, no) => {
+      let r = d.transaction("artworks").objectStore("artworks").getAll();
+      r.onsuccess = () =>
+        ok(r.result.sort((a, b) => b.updatedAt - a.updatedAt));
+      r.onerror = () => no(r.error);
+    });
+  } catch {
+    return [];
+  }
+}
+async function dbPut(v) {
+  let d = await dbOpen();
+  return new Promise((ok, no) => {
+    let t = d.transaction("artworks", "readwrite");
+    t.objectStore("artworks").put(v);
+    t.oncomplete = ok;
+    t.onerror = () => no(t.error);
+  });
+}
+async function dbDel(id) {
+  let d = await dbOpen();
+  return new Promise((ok, no) => {
+    let t = d.transaction("artworks", "readwrite");
+    t.objectStore("artworks").delete(id);
+    t.oncomplete = ok;
+    t.onerror = () => no(t.error);
+  });
+}
+function serialize() {
+  return serializeSvg({
+    width: s.w,
+    height: s.h,
+    layers,
+    getLayerChildrenHtml: (id) => {
+      let g = $(`#${CSS.escape(id)}`);
+      return g ? [...g.children].map((n) => n.outerHTML).join("") : "";
+    },
+    pretty: true,
+  });
+}
+function refreshCode() {
+  let xml = serialize();
+  let analysis = analyzeSvg(xml);
+  $("#file-size").textContent = `${analysis.sizeKb} KB`;
+  $("#line-numbers").textContent = analysis.lines.map((_, i) => i + 1).join("\n");
+  $("#svg-code").textContent = xml;
+}
+function empty() {
+  $("#empty-hint").classList.toggle(
+    "visible",
+    !root.querySelector("path,circle,rect,ellipse,polygon,polyline,line"),
+  );
+}
+function buttons() {
+  for (let [id, disabled] of [
+    ["undo", s.hi <= 0],
+    ["redo", s.hi >= s.history.length - 1],
+  ]) {
+    $("#" + id).disabled = disabled;
+    $("#" + id).style.opacity = disabled ? ".4" : "1";
+  }
+}
+function saveHistory() {
+  let x = serialize();
+  if (s.history[s.hi] === x) return;
+  s.history = s.history.slice(0, s.hi + 1);
+  s.history.push(x);
+  if (s.history.length > 60) s.history.shift();
+  s.hi = s.history.length - 1;
+  buttons();
+  refreshCode();
+}
+function applySnapshot(xml) {
+  let d = new DOMParser().parseFromString(xml, "image/svg+xml"),
+    r = d.documentElement;
+  if (r.nodeName.toLowerCase() !== "svg" || d.querySelector("parsererror"))
+    return;
+  let vb = r.getAttribute("viewBox")?.split(/[ ,]+/).map(Number);
+  if (vb?.length === 4) {
+    s.w = vb[2];
+    s.h = vb[3];
+  }
+  svg.setAttribute("viewBox", `0 0 ${s.w} ${s.h}`);
+  $("#dimensions-label").textContent = `${s.w} × ${s.h} px`;
+  let sizeOpt = [...$("#size-select").options].find(
+    (o) => o.value === `${s.w},${s.h}`,
+  );
+  if (!sizeOpt) {
+    sizeOpt = new Option(`${s.w} × ${s.h}`, `${s.w},${s.h}`);
+    $("#size-select").add(sizeOpt);
+  }
+  $("#size-select").value = sizeOpt.value;
+  layers = [...r.children]
+    .filter((n) => n.tagName.toLowerCase() === "g")
+    .map((g, i) => ({
+      id: g.id || `layer-${i + 1}`,
+      name: g.getAttribute("data-name") || `Camada ${i + 1}`,
+      visible: g.getAttribute("style") !== "display:none",
+      locked: g.getAttribute("data-locked") === "true",
+      opacity: Number(g.getAttribute("opacity") ?? 1),
+    }));
+  if (!layers.length)
+    layers = [
+      {
+        id: "layer-1",
+        name: "Camada 1",
+        visible: true,
+        locked: false,
+        opacity: 1,
+      },
+    ];
+  root.replaceChildren();
+  for (let l of layers) {
+    let src = r.querySelector(`#${CSS.escape(l.id)}`),
+      g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.id = l.id;
+    g.setAttribute("opacity", l.opacity);
+    if (!l.visible) g.style.display = "none";
+    if (src)
+      [...src.children].forEach((n) => g.append(document.importNode(n, true)));
+    root.append(g);
+  }
+  s.active = layers.at(-1).id;
+  updateLayers();
+  refreshCode();
+  empty();
+}
+function updateLayers() {
+  let host = $("#layer-list");
+  host.innerHTML = "";
+  for (let l of [...layers].reverse()) {
+    let row = document.createElement("div");
+    row.className = `layer-row ${l.id === s.active ? "selected" : ""}`;
+    row.draggable = true;
+    row.dataset.id = l.id;
+    row.innerHTML = `<i class="layer-grip" data-icon="grip-vertical"></i><div class="layer-name"><i data-icon="layers-3"></i><span title="Duplo clique para renomear">${esc(l.name)}</span></div><div class="layer-actions"><button data-action="visibility" class="${l.visible ? "enabled" : ""}" title="Visibilidade"><i data-icon="${l.visible ? "eye" : "eye-off"}"></i></button><button data-action="lock" class="${l.locked ? "enabled" : ""}" title="Bloquear camada"><i data-icon="${l.locked ? "lock" : "unlock"}"></i></button><button data-action="delete" title="Excluir camada"><i data-icon="trash"></i></button></div>`;
+    host.append(row);
+  }
+  drawIcons(host);
+  let l = layers.find((x) => x.id === s.active) || layers.at(-1);
+  $("#opacity-range").value = Math.round(l.opacity * 100);
+  $("#opacity-output").textContent = `${Math.round(l.opacity * 100)}%`;
+  let g = $(`#${CSS.escape(l.id)}`);
+  if (g) g.setAttribute("opacity", l.opacity);
+}
+function tool(t) {
+  s.tool = t;
+  $$(".tool").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tool === t),
+  );
+  wrap.className = `canvas-wrap tool-${t}`;
+}
+function pt(e) {
+  let p = svg.createSVGPoint();
+  p.x = e.clientX;
+  p.y = e.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+svg.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  let target = e.target.closest("[data-draw-id]"),
+    targetLayer =
+      target && layers.find((l) => l.id === target.parentElement?.id),
+    editable = targetLayer && !targetLayer.locked && targetLayer.visible;
+  if (s.tool === "select") {
+    if (editable) {
+      s.active = targetLayer.id;
+      updateLayers();
+      s.selection = {
+        element: target,
+        start: pt(e),
+        original: target.getAttribute("transform") || "",
+      };
+      svg.setPointerCapture(e.pointerId);
+    }
+    return;
+  }
+  if (s.tool === "eraser") {
+    if (editable) {
+      target.remove();
+      saveHistory();
+      empty();
+    } else toast("Clique sobre um traço desbloqueado para apagá-lo.");
+    return;
+  }
+  let l = layers.find((x) => x.id === s.active);
+  if (!l || l.locked || !l.visible) return;
+  if (s.tool === "fill") {
+    if (!editable) return toast("Clique em uma forma fechada e desbloqueada.");
+    let d = target.getAttribute("d") || "",
+      closed =
+        /z\s*$/i.test(d) ||
+        ["polygon", "rect", "circle", "ellipse"].includes(
+          target.tagName.toLowerCase(),
+        );
+    if (!closed)
+      return toast(
+        "Esse traço está aberto. O balde preenche apenas formas fechadas.",
+      );
+    target.setAttribute("fill", s.color);
+    target.setAttribute("stroke", s.color);
+    saveHistory();
+    return;
+  }
+  s.drawing = true;
+  s.points = [pt(e)];
+  let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.dataset.drawId = crypto.randomUUID();
+  p.setAttribute("d", pointsToPathD(s.points, false, 1));
+  p.setAttribute("fill", "none");
+  p.setAttribute("stroke", s.color);
+  p.setAttribute("stroke-width", s.width);
+  p.setAttribute("stroke-linecap", "round");
+  p.setAttribute("stroke-linejoin", "round");
+  p.setAttribute("vector-effect", "non-scaling-stroke");
+  s.path = p;
+  $(`#${CSS.escape(s.active)}`).append(p);
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener("pointermove", (e) => {
+  if (s.selection) {
+    let p = pt(e),
+      dx = p.x - s.selection.start.x,
+      dy = p.y - s.selection.start.y;
+    s.selection.element.setAttribute(
+      "transform",
+      `${s.selection.original} translate(${dx.toFixed(1)} ${dy.toFixed(1)})`.trim(),
+    );
+    refreshCode();
+    return;
+  }
+  if (!s.drawing) return;
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of events) {
+    const p = pt(ev);
+    const q = s.points.at(-1);
+    if (!q || Math.hypot(p.x - q.x, p.y - q.y) >= 0.8) {
+      s.points.push(p);
+    }
+  }
+  s.path.setAttribute("d", pointsToPathD(s.points, false, 1));
+  refreshCode();
+  empty();
+});
+function finish() {
+  if (s.selection) {
+    s.selection = null;
+    saveHistory();
+    return;
+  }
+  if (!s.drawing) return;
+  s.drawing = false;
+  if (s.path) {
+    const closed = isPathClosed(s.points, s.width);
+    const epsilon = Math.max(0.6, s.width * 0.12);
+    const simplified = simplifyRDP(s.points, epsilon);
+    s.path.setAttribute("d", pointsToPathD(simplified, closed, 1));
+    trackEvent("stroke_completed", {
+      tool: s.tool,
+      layer_id: s.active,
+      points_count: simplified.length,
+      raw_points: s.points.length,
+    });
+    s.path = null;
+    saveHistory();
+    empty();
+  }
+}
+svg.addEventListener("pointerup", finish);
+svg.addEventListener("pointercancel", finish);
+$$(".tool").forEach((b) => (b.onclick = () => tool(b.dataset.tool)));
+$$(".swatch").forEach(
+  (b) =>
+    (b.onclick = () => {
+      s.color = b.dataset.color;
+      $("#color-picker").value = s.color;
+      $$(".swatch").forEach((x) => x.classList.toggle("selected", x === b));
+    }),
+);
+$("#color-picker").oninput = (e) => {
+  s.color = e.target.value;
+  $$(".swatch").forEach((x) => x.classList.remove("selected"));
+};
+$("#stroke-width").oninput = (e) => {
+  s.width = +e.target.value;
+  $("#stroke-output").value = s.width;
+  $("#stroke-preview").style.width = $("#stroke-preview").style.height =
+    `${Math.min(s.width, 20)}px`;
+};
+$("#undo").onclick = () => {
+  if (s.hi > 0) {
+    applySnapshot(s.history[--s.hi]);
+    buttons();
+  }
+};
+$("#redo").onclick = () => {
+  if (s.hi < s.history.length - 1) {
+    applySnapshot(s.history[++s.hi]);
+    buttons();
+  }
+};
+$("#clear").onclick = () => {
+  if (!root.querySelector("path,circle,rect,ellipse,polygon,polyline,line"))
+    return toast("A prancheta já está vazia.");
+  root.querySelectorAll("g").forEach((g) => g.replaceChildren());
+  saveHistory();
+  empty();
+  toast("Prancheta limpa");
+};
+$("#size-select").onchange = (e) => {
+  [s.w, s.h] = e.target.value.split(",").map(Number);
+  svg.setAttribute("viewBox", `0 0 ${s.w} ${s.h}`);
+  $("#dimensions-label").textContent = `${s.w} × ${s.h} px`;
+  saveHistory();
+};
+function zoom(n) {
+  s.zoom = Math.max(40, Math.min(160, n));
+  $("#zoom-value").textContent = `${s.zoom}%`;
+  wrap.style.transform = `scale(${s.zoom / 100})`;
+  wrap.style.transformOrigin = "center";
+}
+$("#zoom-in").onclick = () => zoom(s.zoom + 10);
+$("#zoom-out").onclick = () => zoom(s.zoom - 10);
+$("#zoom-value").onclick = () => zoom(100);
+$("#add-layer").onclick = () => {
+  let l = {
+    id: `layer-${Date.now()}`,
+    name: `Camada ${layers.length + 1}`,
+    visible: true,
+    locked: false,
+    opacity: 1,
+  };
+  layers.push(l);
+  let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.id = l.id;
+  root.append(g);
+  s.active = l.id;
+  updateLayers();
+  saveHistory();
+  toast("Camada adicionada");
+};
+$("#layer-list").onclick = (e) => {
+  let row = e.target.closest(".layer-row");
+  if (!row) return;
+  let l = layers.find((x) => x.id === row.dataset.id),
+    a = e.target.closest("button")?.dataset.action;
+  if (a === "delete") {
+    if (layers.length === 1) return toast("Mantenha pelo menos uma camada.");
+    $(`#${CSS.escape(l.id)}`).remove();
+    layers = layers.filter((x) => x.id !== l.id);
+    if (s.active === l.id) s.active = layers.at(-1).id;
+    updateLayers();
+    saveHistory();
+    toast("Camada excluída");
+  } else if (a === "visibility") {
+    l.visible = !l.visible;
+    $(`#${CSS.escape(l.id)}`).style.display = l.visible ? "" : "none";
+    updateLayers();
+    saveHistory();
+  } else if (a === "lock") {
+    l.locked = !l.locked;
+    updateLayers();
+    saveHistory();
+    toast(l.locked ? "Camada bloqueada" : "Camada desbloqueada");
+  } else {
+    s.active = l.id;
+    updateLayers();
+  }
+};
+$("#layer-list").ondblclick = (e) => {
+  let span = e.target.closest(".layer-name span");
+  if (!span) return;
+  let l = layers.find((x) => x.id === span.closest(".layer-row").dataset.id),
+    i = document.createElement("input");
+  i.value = l.name;
+  span.replaceWith(i);
+  i.focus();
+  i.select();
+  i.onblur = () => {
+    l.name = i.value.trim() || l.name;
+    updateLayers();
+    saveHistory();
+  };
+  i.onkeydown = (e) => {
+    if (e.key === "Enter") i.blur();
+    if (e.key === "Escape") {
+      i.value = l.name;
+      i.blur();
+    }
+  };
+};
+$("#layer-list").ondragstart = (e) => {
+  let r = e.target.closest(".layer-row");
+  if (r) {
+    s.drag = r.dataset.id;
+    r.classList.add("dragging");
+  }
+};
+$("#layer-list").ondragover = (e) => {
+  e.preventDefault();
+  e.target.closest(".layer-row")?.classList.add("drag-over");
+};
+$("#layer-list").ondrop = (e) => {
+  e.preventDefault();
+  let r = e.target.closest(".layer-row");
+  if (!r || !s.drag || r.dataset.id === s.drag) return;
+  let a = layers.findIndex((x) => x.id === s.drag),
+    b = layers.findIndex((x) => x.id === r.dataset.id),
+    [m] = layers.splice(a, 1);
+  layers.splice(b, 0, m);
+  layers.forEach((l) => root.append($(`#${CSS.escape(l.id)}`)));
+  s.drag = null;
+  updateLayers();
+  saveHistory();
+};
+$("#opacity-range").oninput = (e) => {
+  let l = layers.find((x) => x.id === s.active);
+  l.opacity = +e.target.value / 100;
+  $("#opacity-output").textContent = `${e.target.value}%`;
+  $(`#${CSS.escape(l.id)}`).setAttribute("opacity", l.opacity);
+  refreshCode();
+};
+$("#opacity-range").onchange = saveHistory;
+function toast(msg) {
+  let t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(window._toast);
+  window._toast = setTimeout(() => t.classList.remove("show"), 2200);
+}
+$("#copy-code").onclick = async () => {
+  try {
+    const xml = serialize();
+    await navigator.clipboard.writeText(xml);
+    trackEvent("svg_copied_clipboard", {
+      svg_length_bytes: xml.length,
+      elements_count: root.querySelectorAll("path,circle,rect,ellipse,polygon,polyline,line").length,
+    });
+    toast("Código SVG copiado");
+  } catch {
+    toast("Área de transferência indisponível");
+  }
+};
+function download(name, blob) {
+  let u = URL.createObjectURL(blob),
+    a = document.createElement("a");
+  a.href = u;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+}
+$("#export-svg").onclick = () => {
+  const xml = serialize();
+  const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+  download("meu-desenho.svg", blob);
+  trackEvent("artwork_exported", {
+    format: "svg",
+    file_size_kb: +(blob.size / 1024).toFixed(1),
+  });
+};
+$("#export-png").onclick = () => {
+  let u = URL.createObjectURL(
+      new Blob([serialize()], { type: "image/svg+xml" }),
+    ),
+    im = new Image();
+  im.onload = () => {
+    let c = document.createElement("canvas");
+    c.width = s.w;
+    c.height = s.h;
+    let x = c.getContext("2d");
+    x.fillStyle = "#fff";
+    x.fillRect(0, 0, s.w, s.h);
+    x.drawImage(im, 0, 0);
+    c.toBlob((b) => {
+      if (b) {
+        download("meu-desenho.png", b);
+        trackEvent("artwork_exported", {
+          format: "png",
+          file_size_kb: +(b.size / 1024).toFixed(1),
+        });
+      }
+      URL.revokeObjectURL(u);
+    }, "image/png");
+  };
+  im.onerror = () => {
+    URL.revokeObjectURL(u);
+    toast("Falha ao exportar PNG");
+  };
+  im.src = u;
+};
+const dlg = $("#save-dialog");
+$("#save").onclick = () => {
+  $("#artwork-name").value =
+    `Desenho ${new Date().toLocaleDateString("pt-BR")}`;
+  dlg.showModal();
+  $("#artwork-name").select();
+};
+$("#save-form").onsubmit = async (e) => {
+  if (e.submitter?.value !== "save") return;
+  e.preventDefault();
+  try {
+    const newId = crypto.randomUUID();
+    await dbPut({
+      id: newId,
+      name: $("#artwork-name").value.trim() || "Desenho sem título",
+      svg: serialize(),
+      updatedAt: Date.now(),
+    });
+    trackEvent("artwork_saved_gallery", {
+      artwork_id: newId,
+      layers_count: layers.length,
+    });
+    dlg.close();
+    toast("Desenho salvo na galeria");
+    await renderGallery();
+  } catch {
+    toast("Não foi possível salvar neste dispositivo");
+  }
+};
+function openGallery() {
+  $("#gallery-drawer").classList.add("open");
+  $("#gallery-drawer").setAttribute("aria-hidden", "false");
+  $("#drawer-backdrop").classList.add("open");
+  renderGallery();
+}
+function closeGallery() {
+  $("#gallery-drawer").classList.remove("open");
+  $("#gallery-drawer").setAttribute("aria-hidden", "true");
+  $("#drawer-backdrop").classList.remove("open");
+}
+$("#gallery-open").onclick = openGallery;
+$("#gallery-close").onclick = closeGallery;
+$("#drawer-backdrop").onclick = closeGallery;
+$("#gallery-start").onclick = closeGallery;
+async function renderGallery() {
+  let items = await dbAll(),
+    grid = $("#gallery-grid");
+  $("#gallery-count").textContent = items.length;
+  $("#gallery-subtitle").textContent =
+    `${items.length} ${items.length === 1 ? "desenho salvo" : "desenhos salvos"}`;
+  $("#gallery-empty").classList.toggle("hidden", items.length > 0);
+  grid.replaceChildren();
+  for (let a of items) {
+    let card = document.createElement("article");
+    card.className = "gallery-card";
+    card.dataset.id = a.id;
+    let th = document.createElement("div");
+    th.className = "thumb";
+    let doc = new DOMParser().parseFromString(a.svg, "image/svg+xml"),
+      im = doc.documentElement;
+    im.removeAttribute("width");
+    im.removeAttribute("height");
+    th.append(document.importNode(im, true));
+    let meta = document.createElement("div");
+    meta.className = "card-meta";
+    let h = document.createElement("h3");
+    h.textContent = a.name;
+    let time = document.createElement("time");
+    time.dateTime = new Date(a.updatedAt).toISOString();
+    time.textContent = new Date(a.updatedAt).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    meta.append(h, time);
+    let acts = document.createElement("div");
+    acts.className = "card-actions";
+    acts.innerHTML =
+      '<button class="button primary" data-action="open"><i data-icon="external-link"></i> Abrir no estúdio</button><button class="icon-button" data-action="duplicate" title="Duplicar"><i data-icon="copy"></i></button><button class="icon-button" data-action="delete" title="Excluir"><i data-icon="trash"></i></button>';
+    card.append(th, meta, acts);
+    grid.append(card);
+  }
+  drawIcons(grid);
+}
+$("#gallery-grid").ondblclick = async (e) => {
+  let title = e.target.closest(".card-meta h3");
+  if (!title) return;
+  let card = title.closest(".gallery-card"),
+    item = (await dbAll()).find((x) => x.id === card.dataset.id);
+  if (!item) return;
+  let input = document.createElement("input");
+  input.value = item.name;
+  title.replaceWith(input);
+  input.focus();
+  input.select();
+  input.onkeydown = (e) => {
+    if (e.key === "Enter") input.blur();
+    if (e.key === "Escape") {
+      input.value = item.name;
+      input.blur();
+    }
+  };
+  input.onblur = async () => {
+    let name = input.value.trim();
+    if (name) item.name = name;
+    item.updatedAt = Date.now();
+    await dbPut(item);
+    await renderGallery();
+  };
+};
+$("#gallery-grid").onclick = async (e) => {
+  let card = e.target.closest(".gallery-card"),
+    a = e.target.closest("[data-action]")?.dataset.action;
+  if (!card || !a) return;
+  let item = (await dbAll()).find((x) => x.id === card.dataset.id);
+  if (!item) return;
+  if (a === "open") {
+    applySnapshot(item.svg);
+    s.history = [serialize()];
+    s.hi = 0;
+    buttons();
+    closeGallery();
+    toast("Desenho aberto no estúdio");
+  } else if (a === "duplicate") {
+    await dbPut({
+      ...item,
+      id: crypto.randomUUID(),
+      name: `${item.name} (cópia)`,
+      updatedAt: Date.now(),
+    });
+    await renderGallery();
+    toast("Cópia criada");
+  } else {
+    await dbDel(item.id);
+    await renderGallery();
+    toast("Desenho excluído");
+  }
+};
+$("#mobile-menu").onclick = () => {
+  const opened = $("#inspector").classList.toggle("mobile-open");
+  if (opened && !$(".inspector-tab.active")) {
+    $(".inspector-tab[data-panel='code']").classList.add("active");
+  }
+};
+$$(".inspector-tab").forEach((b) => {
+  b.onclick = () => {
+    const workspace = $(".workspace");
+    const isMobile = window.matchMedia("(max-width: 760px)").matches;
+    const alreadyOpen =
+      !workspace.classList.contains("inspector-collapsed") &&
+      b.classList.contains("active");
+    if (!isMobile && alreadyOpen) {
+      workspace.classList.add("inspector-collapsed");
+      b.classList.remove("active");
+      return;
+    }
+    workspace.classList.remove("inspector-collapsed");
+    $$(".inspector-tab").forEach((tab) =>
+      tab.classList.toggle("active", tab === b),
+    );
+    $("#code-panel").classList.toggle("hidden", b.dataset.panel !== "code");
+    $("#layers-panel").classList.toggle("hidden", b.dataset.panel !== "layers");
+    if (isMobile) $("#inspector").classList.add("mobile-open");
+  };
+});
+document.onkeydown = (e) => {
+  if (e.key === "Escape") closeGallery();
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName))
+    return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+    e.preventDefault();
+    (e.shiftKey ? $("#redo") : $("#undo")).click();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+    e.preventDefault();
+    $("#redo").click();
+  } else if (!e.ctrlKey && !e.metaKey) {
+    let k = e.key.toLowerCase();
+    if (k === "b") tool("brush");
+    if (k === "e") tool("eraser");
+    if (k === "g") tool("fill");
+    if (k === "v") tool("select");
+  }
+};
+saveHistory();
+updateLayers();
+refreshCode();
+empty();
+renderGallery();

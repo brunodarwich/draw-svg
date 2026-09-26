@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Ícone DrawSVG Studio</title>
+  <desc id="desc">Sinais de código e traço vetorial com pontos azul e violeta.</desc>
+  <defs>
+    <linearGradient id="stroke" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0284c7"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="#38bdf8" stroke-width="35" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m151 108-105 97 105 97"/>
+    <path d="m361 108 105 97-105 97"/>
+  </g>
+  <path d="M152 338c90 25 102-48 123-112 24-76 57-100 93-94" fill="none" stroke="url(#stroke)" stroke-width="44" stroke-linecap="round"/>
+  <circle cx="152" cy="338" r="31" fill="#0284c7"/>
+  <circle cx="368" cy="132" r="31" fill="#8b5cf6"/>
+</svg>

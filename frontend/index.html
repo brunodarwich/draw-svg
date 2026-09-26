@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09090b" />
+    <meta
+      name="description"
+      content="DrawSVG Studio — desenho vetorial direto no navegador."
+    />
+    <title>DrawSVG Studio</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/assets/images/logo-preferred-icon.svg"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="DrawSVG Studio início"
+          ><span class="brand-mark"
+            ><img src="/assets/images/logo-preferred-icon.svg" alt="" /></span
+          ><span>DrawSVG <b>Studio</b></span></a
+        >
+        <div class="top-controls">
+          <label class="select-wrap"
+            ><span class="sr-only">Dimensões da prancheta</span
+            ><select id="size-select">
+              <option value="800,600">800 × 600</option>
+              <option value="1200,800">1200 × 800</option>
+              <option value="1080,1080">1080 × 1080</option>
+              <option value="600,900">600 × 900</option></select
+            ><i data-icon="chevron-down"></i
+          ></label>
+          <span class="divider"></span>
+          <button
+            class="icon-button"
+            id="undo"
+            title="Desfazer (Ctrl+Z)"
+            aria-label="Desfazer"
+          >
+            <i data-icon="undo-2"></i>
+          </button>
+          <button
+            class="icon-button"
+            id="redo"
+            title="Refazer (Ctrl+Y)"
+            aria-label="Refazer"
+          >
+            <i data-icon="redo-2"></i>
+          </button>
+          <button class="text-button" id="clear">
+            <i data-icon="trash-2"></i><span>Limpar</span>
+          </button>
+          <span class="divider"></span>
+          <div class="zoom-control">
+            <button class="icon-button" id="zoom-out" aria-label="Reduzir zoom">
+              <i data-icon="minus"></i></button
+            ><button id="zoom-value">100%</button
+            ><button class="icon-button" id="zoom-in" aria-label="Ampliar zoom">
+              <i data-icon="plus"></i>
+            </button>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="button primary" id="save">
+            <i data-icon="download"></i><span>Salvar na galeria</span></button
+          ><button class="button secondary" id="gallery-open">
+            <i data-icon="images"></i><span>Abrir galeria</span
+            ><span class="count" id="gallery-count">0</span>
+          </button>
+        </div>
+        <button
+          class="mobile-menu icon-button"
+          id="mobile-menu"
+          aria-label="Abrir ferramentas"
+        >
+          <i data-icon="panel-left"></i>
+        </button>
+      </header>
+      <main class="workspace inspector-collapsed">
+        <aside class="toolbar" aria-label="Ferramentas de desenho">
+          <div class="tool-group">
+            <button
+              class="tool active"
+              data-tool="brush"
+              title="Pincel (B)"
+              aria-label="Pincel"
+            >
+              <i data-icon="brush"></i><kbd>B</kbd>
+            </button>
+            <button
+              class="tool"
+              data-tool="eraser"
+              title="Borracha (E)"
+              aria-label="Borracha"
+            >
+              <i data-icon="eraser"></i><kbd>E</kbd>
+            </button>
+            <button
+              class="tool"
+              data-tool="fill"
+              title="Balde de tinta (G)"
+              aria-label="Balde de tinta"
+            >
+              <i data-icon="paint-bucket"></i><kbd>G</kbd>
+            </button>
+            <button
+              class="tool"
+              data-tool="select"
+              title="Selecionar (V)"
+              aria-label="Selecionar"
+            >
+              <i data-icon="mouse-pointer-2"></i><kbd>V</kbd>
+            </button>
+          </div>
+          <div class="tool-separator"></div>
+          <div class="palette" aria-label="Cores recentes">
+            <button
+              class="swatch selected"
+              style="--swatch: #0ea5e9"
+              data-color="#0ea5e9"
+              title="Azul céu"
+            ></button>
+            <button
+              class="swatch"
+              style="--swatch: #8b5cf6"
+              data-color="#8b5cf6"
+              title="Violeta"
+            ></button>
+            <button
+              class="swatch"
+              style="--swatch: #18181b"
+              data-color="#18181b"
+              title="Carvão"
+            ></button>
+            <button
+              class="swatch"
+              style="--swatch: #e4e4e7"
+              data-color="#e4e4e7"
+              title="Cinza claro"
+            ></button>
+            <button
+              class="swatch"
+              style="--swatch: #f0abfc"
+              data-color="#f0abfc"
+              title="Rosa"
+            ></button>
+            <button
+              class="swatch"
+              style="--swatch: #34d399"
+              data-color="#34d399"
+              title="Verde"
+            ></button>
+            <label class="custom-color" title="Escolher cor"
+              ><input id="color-picker" type="color" value="#0ea5e9" /><i
+                data-icon="plus"
+              ></i
+            ></label>
+          </div>
+          <div class="tool-separator"></div>
+          <label class="stroke-label" for="stroke-width"
+            ><span>Traço</span><output id="stroke-output">6</output></label
+          >
+          <input
+            id="stroke-width"
+            class="vertical-range"
+            type="range"
+            min="2"
+            max="48"
+            value="6"
+            aria-label="Espessura do traço"
+          />
+          <span class="stroke-preview" id="stroke-preview"></span>
+        </aside>
+        <section class="canvas-area" aria-label="Área de desenho">
+          <div class="canvas-wrap" id="canvas-wrap">
+            <svg
+              id="artboard"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 800 600"
+              role="img"
+              aria-label="Prancheta de desenho em branco"
+            >
+              <g id="layers-root"></g>
+            </svg>
+            <div class="empty-hint" id="empty-hint">
+              <span><i data-icon="mouse-pointer-2"></i></span
+              ><b>Sua prancheta está pronta</b
+              ><small>Escolha uma ferramenta e comece a desenhar</small>
+            </div>
+          </div>
+          <div class="canvas-footer">
+            <span><span class="live-dot"></span> Salvo localmente</span
+            ><span id="dimensions-label">800 × 600 px</span>
+          </div>
+        </section>
+        <aside class="inspector" id="inspector">
+          <div class="inspector-tabs">
+            <button class="inspector-tab" data-panel="code">
+              <i data-icon="code-2"></i><span>Código SVG</span
+              ><i class="tab-chevron" data-icon="chevron-right"></i></button
+            ><button class="inspector-tab" data-panel="layers">
+              <i data-icon="layers-3"></i><span>Camadas</span
+              ><i class="tab-chevron" data-icon="chevron-right"></i>
+            </button>
+          </div>
+          <section class="inspector-content" id="code-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>SVG ao vivo</h2>
+                <p>Atualizado a cada traço</p>
+              </div>
+              <span class="file-size" id="file-size">0 KB</span>
+            </div>
+            <div class="code-window">
+              <div class="line-numbers" id="line-numbers">1</div>
+              <pre id="svg-code" aria-label="Código SVG"></pre>
+            </div>
+            <button class="button primary full" id="copy-code">
+              <i data-icon="copy"></i><span>Copiar código SVG</span>
+            </button>
+            <div class="export-title"><span>Exportar desenho</span></div>
+            <div class="export-actions">
+              <button class="button secondary" id="export-svg">
+                <i data-icon="file-code-2"></i> .SVG</button
+              ><button class="button secondary" id="export-png">
+                <i data-icon="image"></i> .PNG
+              </button>
+            </div>
+            <p class="privacy-note">
+              <i data-icon="lock-keyhole"></i> Seus desenhos ficam neste
+              dispositivo.
+            </p>
+          </section>
+          <section class="inspector-content hidden" id="layers-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Camadas</h2>
+                <p>Organize seu desenho</p>
+              </div>
+              <button
+                class="small-icon"
+                id="add-layer"
+                aria-label="Adicionar camada"
+                title="Adicionar camada"
+              >
+                <i data-icon="plus"></i>
+              </button>
+            </div>
+            <div class="layer-list" id="layer-list"></div>
+            <div class="layer-properties">
+              <div class="property-heading">
+                <span>Opacidade</span><output id="opacity-output">100%</output>
+              </div>
+              <input
+                type="range"
+                id="opacity-range"
+                min="0"
+                max="100"
+                value="100"
+              />
+            </div>
+            <p class="layer-tip">
+              <i data-icon="move-vertical"></i> Arraste as camadas para
+              reordenar
+            </p>
+          </section>
+        </aside>
+      </main>
+      <div class="drawer-backdrop" id="drawer-backdrop"></div>
+      <aside
+        class="gallery-drawer"
+        id="gallery-drawer"
+        aria-label="Galeria de desenhos"
+        aria-hidden="true"
+      >
+        <header class="drawer-header">
+          <div>
+            <h1>Minha galeria</h1>
+            <span id="gallery-subtitle">0 desenhos salvos</span>
+          </div>
+          <button
+            class="icon-button close-drawer"
+            id="gallery-close"
+            aria-label="Fechar galeria"
+          >
+            <i data-icon="x"></i>
+          </button>
+        </header>
+        <div class="gallery-grid" id="gallery-grid"></div>
+        <div class="gallery-empty" id="gallery-empty">
+          <div class="empty-art">
+            <svg viewBox="0 0 160 120" aria-hidden="true">
+              <rect
+                x="28"
+                y="20"
+                width="104"
+                height="78"
+                rx="10"
+                fill="#18181b"
+                stroke="#3f3f46"
+              />
+              <path d="m47 77 20-23 15 16 12-13 21 24H47Z" fill="#27272a" />
+              <circle cx="105" cy="42" r="8" fill="#0ea5e9" opacity=".8" />
+              <path
+                d="m64 40 14-16 14 16"
+                fill="none"
+                stroke="#8b5cf6"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M55 106h50" stroke="#52525b" stroke-linecap="round" />
+            </svg>
+          </div>
+          <h2>Nenhum desenho por aqui</h2>
+          <p>
+            Quando salvar uma criação, ela aparecerá nesta galeria. Seus
+            arquivos ficam guardados apenas neste navegador.
+          </p>
+          <button class="button secondary" id="gallery-start">
+            <i data-icon="brush"></i> Começar a desenhar
+          </button>
+        </div>
+      </aside>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <dialog id="save-dialog" class="save-dialog">
+        <form method="dialog" id="save-form">
+          <button class="dialog-close" value="cancel" aria-label="Fechar">
+            <i data-icon="x"></i></button
+          ><span class="dialog-icon"><i data-icon="image-plus"></i></span>
+          <h2>Salvar desenho</h2>
+          <p>Dê um nome para encontrar sua criação depois.</p>
+          <label for="artwork-name">Nome do desenho</label
+          ><input
+            id="artwork-name"
+            maxlength="60"
+            placeholder="Meu desenho"
+            required
+          />
+          <div class="dialog-actions">
+            <button class="button secondary" value="cancel">Cancelar</button
+            ><button class="button primary" id="confirm-save" value="save">
+              <i data-icon="download"></i> Salvar
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

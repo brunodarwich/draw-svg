@@ -1,7 +1,7 @@
 window.__ANALYTICS_DATA__ = {
   "project": {
-    "name": "Framework de Desenvolvimento & Orquestração com IA",
-    "last_updated": "2026-09-24",
+    "name": "DrawSVG Studio",
+    "last_updated": "2026-09-26",
     "currency_primary": "BRL",
     "currency_secondary": "USD"
   },
@@ -43,24 +43,29 @@ window.__ANALYTICS_DATA__ = {
   ],
   "events_catalog": [
     {
-      "event_name": "user_signed_up",
-      "description": "Disparado ao concluir cadastro",
-      "target_kpi": "total_signups"
-    },
-    {
-      "event_name": "feature_core_used",
-      "description": "Disparado ao gerar primeiro resultado (Ativação)",
+      "event_name": "stroke_completed",
+      "description": "Disparado ao concluir traço vetorial (monitora fluidez e pontos)",
       "target_kpi": "activation_rate"
     },
     {
-      "event_name": "checkout_started",
-      "description": "Disparado ao abrir tela de checkout",
-      "target_kpi": "checkout_conversion_rate"
+      "event_name": "svg_copied_clipboard",
+      "description": "Disparado ao copiar SVG para a área de transferência (Aha! Moment)",
+      "target_kpi": "activation_rate"
     },
     {
-      "event_name": "payment_completed",
-      "description": "Webhook confirmado de assinatura ou compra",
-      "target_kpi": "mrr_brl"
+      "event_name": "artwork_saved_gallery",
+      "description": "Disparado ao salvar arte na galeria IndexedDB local",
+      "target_kpi": "active_users_monthly"
+    },
+    {
+      "event_name": "artwork_exported",
+      "description": "Disparado ao baixar arquivo .svg ou renderização .png",
+      "target_kpi": "activation_rate"
+    },
+    {
+      "event_name": "layer_action",
+      "description": "Disparado em ações de camadas (criar, excluir, reordenar, opacidade)",
+      "target_kpi": "active_users_daily"
     }
   ],
   "recent_events": []

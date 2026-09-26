@@ -1,3 +1,15 @@
+# DrawSVG Studio
+
+**Modelo de interface concluído e revisado.** As quatro telas navegáveis estão em [`frontend/`](frontend/): estúdio de desenho, inspetor SVG, camadas e galeria. A marca usada na interface é a versão escolhida pelo Bruno em `public/assets/images/logo-preferred.svg`.
+
+## Abrir o aplicativo
+
+No terminal, dentro da pasta `frontend/`, execute `npm install` uma vez e depois `npm run dev`. Abra o endereço exibido pelo Vite (normalmente `http://127.0.0.1:5173/`). Para gerar a versão estática de produção, execute `npm run build`.
+
+O modelo já permite desenhar traços SVG, mover ou apagar traços, preencher formas fechadas, usar histórico, editar camadas, copiar/exportar SVG e PNG e salvar desenhos na galeria local do navegador. A engine vetorial avançada e sua auditoria de desempenho seguem como trabalho do Marco 3; por isso a integração completa do Marco 4 permanece em desenvolvimento no painel de tarefas.
+
+---
+
 # Framework de Desenvolvimento & Orquestração com IA
 
 Um kit operacional e metodológico desenhado sob medida para desenvolvimento ágil de projetos e produtos digitais com agentes de inteligência artificial (compatível com Google Antigravity, OpenAI Codex, Cursor, Claude Code e similares).

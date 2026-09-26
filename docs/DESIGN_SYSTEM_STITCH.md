@@ -45,6 +45,34 @@
 | `SCREEN-03` | **Gerenciador de Camadas (Layers Panel)** | Aba lateral para organizar os grupos vetoriais `<g>` | Lista de camadas com drag-and-drop, visibilidade (olho), bloqueio (cadeado), opacidade e botão de nova camada |
 | `SCREEN-04` | **Gaveta da Galeria Visual (IndexedDB)** | Visualização de todos os desenhos salvos no navegador | Grade de cards com miniaturas visuais, data, botão "Abrir no Estúdio", "Duplicar" e "Excluir" |
 
+### Imagens de Referência das Telas
+
+As quatro prévias seguem a mesma estrutura de navegação, paleta e ilustração para facilitar a comparação de estados. [Abrir galeria de revisão](stitch/screens/index.html).
+
+| Tela | Prévia |
+|---|---|
+| `SCREEN-01` Studio Workspace | [screen-01-studio-workspace.png](stitch/screens/screen-01-studio-workspace.png) |
+| `SCREEN-02` Inspetor SVG | [screen-02-svg-inspector.png](stitch/screens/screen-02-svg-inspector.png) |
+| `SCREEN-03` Camadas | [screen-03-layers-panel.png](stitch/screens/screen-03-layers-panel.png) |
+| `SCREEN-04` Galeria | [screen-04-gallery-drawer.png](stitch/screens/screen-04-gallery-drawer.png) |
+
+**Uso**: referências de direção visual para validação no Stitch. O código SVG e as datas mostrados nas prévias são ilustrativos; a implementação deverá gerar os valores reais da aplicação.
+
+### Modelo de Interface HTML/CSS/JS — Concluído e Revisado
+
+As quatro telas foram convertidas em estados navegáveis da aplicação em `frontend/index.html`, `frontend/src/style.css` e `frontend/src/main.js`. A marca escolhida pelo Bruno aparece no cabeçalho e no favicon.
+
+| Tela | Estado implementado |
+|---|---|
+| `SCREEN-01` Estúdio | Prancheta branca, ferramentas à esquerda e inspetor recolhido inicialmente |
+| `SCREEN-02` Inspetor SVG | Painel de código aberto, com cópia e exportação SVG/PNG |
+| `SCREEN-03` Camadas | Painel de camadas aberto, com criação, ordem, visibilidade, bloqueio e opacidade |
+| `SCREEN-04` Galeria | Gaveta com estado vazio real ou cards de desenhos salvos no IndexedDB |
+
+**Revisão**: `npm run build` aprovado; navegação pelos quatro estados e persistência da galeria verificadas no navegador; layout desktop e largura de 390 px sem erro de console ou rolagem horizontal. A imagem do pássaro e as seis artes das prévias são exemplos visuais; o aplicativo abre uma prancheta vazia e mostra somente criações salvas pelo usuário.
+
+**Próxima validação técnica**: desempenho de 60 fps, simplificação de caminhos e critérios finais da engine vetorial, tratados em tarefas próprias.
+
 ---
 
 ## 3. Direção de Arte & Geração de Ativos Visuais (Imagens)
@@ -59,7 +87,8 @@
 ### Catálogo de Ativos Visuais do MVP
 | ID Ativo | Nome do Ativo | Finalidade no Produto | Proporção (Aspect Ratio) | Destino do Arquivo |
 |---|---|---|---|---|
-| `IMG-01` | `drawsvg_studio_logo` | Logotipo e ícone oficial do DrawSVG Studio | 1:1 | `public/assets/images/logo.png` |
+| `IMG-01` | `drawsvg_studio_logo` | Marca escolhida pelo Bruno: sinais de código unidos por curva vetorial com nós azul e violeta | 1:1 | `public/assets/images/logo-preferred.svg` (vetor), `public/assets/images/logo-preferred.png` (PNG transparente) e `public/assets/images/logo-preferred-reference.png` (imagem original escolhida) |
+| `IMG-01A` | `drawsvg_studio_icon` | Símbolo compacto da marca escolhida para barra do estúdio e favicon | 1:1 | `public/assets/images/logo-preferred-icon.svg` e `public/assets/images/logo-preferred-icon.png` |
 | `IMG-02` | `empty_gallery_artwork` | Ilustração elegante para estado vazio da galeria | 4:3 | `public/assets/images/empty_gallery.png` |
 | `IMG-03` | `drawsvg_hero_banner` | Banner de apresentação e social share do estúdio | 16:9 | `public/assets/images/hero_banner.png` |
 

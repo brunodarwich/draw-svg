@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Ícone DrawSVG Studio</title>
+  <desc id="desc">Um traço livre forma uma curva vetorial entre sinais de código.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M165 105 65 224l100 119" stroke="#38bdf8" stroke-width="34"/>
+    <path d="m347 105 100 119-100 119" stroke="#38bdf8" stroke-width="34"/>
+    <path d="M113 379c61-113 108 24 173-91 53-93 101-80 159-164" stroke="#0284c7" stroke-width="38"/>
+    <path d="M113 379c61-113 108 24 173-91 53-93 101-80 159-164" stroke="#38bdf8" stroke-width="17"/>
+  </g>
+  <path d="m97 396 18-42 23 24-41 18Z" fill="#8b5cf6"/>
+  <circle cx="286" cy="288" r="14" fill="#8b5cf6"/>
+  <circle cx="445" cy="124" r="14" fill="#8b5cf6"/>
+</svg>

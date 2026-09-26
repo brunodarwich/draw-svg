@@ -37,6 +37,8 @@ O DrawSVG Studio adota uma arquitetura **100% Client-Side**, orientada a eventos
 
 ## 2. Camadas da Stack Tecnológica
 
+**Modelo de interface concluído e revisado**: `frontend/index.html`, `frontend/src/style.css` e `frontend/src/main.js` compõem as quatro vistas navegáveis em Vite/JavaScript puro. `frontend/public/assets/images/logo-preferred-icon.svg` é a cópia da marca aprovada usada na barra superior. Os desenhos da galeria são persistidos em IndexedDB no próprio navegador. O build de produção e a navegação responsiva foram verificados; a medição da engine de 60 fps segue pendente.
+
 | Camada | Tecnologia Escolhida | Justificativa Técnica |
 |---|---|---|
 | **Build & Bundler** | **Vite** | Inicialização instantânea, Hot Module Replacement (HMR) ultra-rápido e build otimizado sem sobrecarga. |

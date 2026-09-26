@@ -38,6 +38,8 @@ Com interface minimalista Dark refinada, foco absoluto na prancheta de pintura e
 
 ## 3. Requisitos Funcionais (Escopo do Produto)
 
+> **Modelo de interface concluído e revisado (2026-09-26)**: As telas do estúdio, inspetor SVG, camadas e galeria foram implementadas em `frontend/` a partir das quatro imagens de referência. O protótipo permite desenho SVG básico, seleção e movimento de traços, remoção de caminhos, preenchimento de formas fechadas, histórico, exportação e persistência local. Build e navegação foram verificados no navegador. A validação da engine de 60fps, simplificação geométrica e demais critérios finais permanece no Marco 3/4; as imagens de referência são conceitos, não dados reais do produto.
+
 | ID | Módulo / Funcionalidade | Descrição & Regra de Negócio | Prioridade (MoSCoW) | Tier IA Indicado |
 |---|---|---|---|---|
 | `RF-01` | **Prancheta & Engine Vetorial Livre** | Prancheta de desenho com renderização a 60fps. Cada traço é interpolado suavemente e convertido em caminho vetorial (`<path>`) otimizado, sem engasgos. | Must Have | Tier 2 |
