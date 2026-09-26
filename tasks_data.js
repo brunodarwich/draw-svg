@@ -5,8 +5,8 @@ window.__TASKS_DATA__ = {
     "version": "1.0.0",
     "last_updated": "2026-09-26",
     "metrics": {
-      "total_tasks": 8,
-      "completed_tasks": 8,
+      "total_tasks": 9,
+      "completed_tasks": 9,
       "progress_percentage": 100
     }
   },
@@ -156,6 +156,23 @@ window.__TASKS_DATA__ = {
         "Clique único apaga um ponto e o tamanho acompanha a espessura selecionada",
         "Desfazer e refazer preservam máscaras e traços; SVG exportado inclui a máscara",
         "Suíte de 9 testes e build de produção aprovados; fluxo conferido no navegador"
+      ],
+      "audit_confirmed": true,
+      "created_at": "2026-09-26",
+      "completed_at": "2026-09-26"
+    },
+    {
+      "id": "TASK-009",
+      "title": "Borracha vetorial destrutiva com movimento coerente",
+      "description": "Subtrair o pincel e áreas preenchidas da geometria SVG, eliminar a máscara estacionária e converter máscaras de desenhos antigos ao abrir.",
+      "status": "done",
+      "milestone": "m4_frontend_ui",
+      "tier": "tier3_reviewer",
+      "indicators": [
+        "Selecionar e arrastar um traço apagado move somente a geometria restante",
+        "Nenhuma máscara nova é criada e o SVG contém os contornos subtraídos",
+        "Borracha funciona novamente após mover o elemento e suporta clique único em preenchimentos",
+        "Desfazer e refazer preservam o resultado; 11 testes e build aprovados"
       ],
       "audit_confirmed": true,
       "created_at": "2026-09-26",

@@ -44,7 +44,7 @@ Com interface minimalista Dark refinada, foco absoluto na prancheta de pintura e
 |---|---|---|---|---|
 | `RF-01` | **Prancheta & Engine Vetorial Livre** | Prancheta de desenho com renderização a 60fps. Cada traço é interpolado suavemente e convertido em caminho vetorial (`<path>`) otimizado, sem engasgos. | Must Have | Tier 2 |
 | `RF-02` | **Ferramenta de Pincel (Brush)** | Pincel com ajuste dinâmico de espessura (size), opacidade e seletor de cor com histórico recente. | Must Have | Tier 2 |
-| `RF-03` | **Borracha Vetorial (Eraser)** | Borracha que apaga somente a região percorrida dos elementos já existentes na camada ativa, inclusive com um clique. Traços posteriores podem repintar a mesma região; desfazer/refazer e o SVG exportado preservam o resultado. | Must Have | Tier 2 |
+| `RF-03` | **Borracha Vetorial (Eraser)** | Borracha que subtrai a região percorrida da geometria vetorial dos elementos da camada ativa, inclusive com um clique. O elemento selecionado ou arrastado conserva apenas as partes restantes; não há máscara estacionária. Traços posteriores podem repintar a região; desfazer/refazer e o SVG exportado preservam o resultado. | Must Have | Tier 2 |
 | `RF-04` | **Balde de Preenchimento (Fill Bucket)** | Preenchimento vetorial de áreas e formas com a cor selecionada. | Must Have | Tier 2 |
 | `RF-05` | **Ferramenta de Seleção / Mover** | Seleção de traços/elementos da camada ativa para reposicionamento e ajuste na tela. | Should Have | Tier 2 |
 | `RF-06` | **Gerenciador de Camadas (Layers)** | Sistema de camadas com criação, exclusão, reordenação, ocultação/exibição e ajuste de opacidade. Cada camada gera um grupo `<g id="layer-n">` no SVG. | Must Have | Tier 2 |

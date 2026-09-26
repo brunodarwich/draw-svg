@@ -471,7 +471,7 @@ select:focus-visible {
   cursor: cell;
 }
 .canvas-wrap.tool-eraser svg {
-  cursor: crosshair;
+  cursor: none;
 }
 .selected-element {
   outline: 2px dashed #0ea5e9 !important;

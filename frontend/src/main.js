@@ -46,6 +46,13 @@ import {
   analyzeSvg,
   escapeXml,
 } from "./engine/serializer.js";
+import {
+  roundStrokePolygon,
+  subtractPolygons,
+  polygonsToPathD,
+  pathDToPolygons,
+  polygonArea,
+} from "./engine/vectorEraser.js";
 import { trackEvent } from "./engine/telemetry.js";
 const $ = (s) => document.querySelector(s),
   $$ = (s) => [...document.querySelectorAll(s)];
@@ -107,6 +114,8 @@ const s = {
   points: [],
   path: null,
   pointerId: null,
+  strokeTool: null,
+  erased: false,
   selection: null,
   active: "layer-1",
   history: [],
@@ -288,6 +297,7 @@ function applySnapshot(xml) {
       [...src.children].forEach((n) => g.append(document.importNode(n, true)));
     root.append(g);
   }
+  migrateLegacyMasks();
   if (!layers.some((x) => x.id === s.active)) {
     s.active = layers.at(-1).id;
   }
@@ -296,49 +306,111 @@ function applySnapshot(xml) {
   refreshCode();
   empty();
 }
-function createEraserMask(layerId) {
-  const layer = $(`#${CSS.escape(layerId)}`);
-  if (!layer || !layer.querySelector("[data-draw-id]")) return null;
-  let defsEl = $("#artboard-defs");
-  if (!defsEl) {
-    defsEl = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-    defsEl.id = "artboard-defs";
-    svg.prepend(defsEl);
+function mapPoint(point, matrix) {
+  const svgPoint = svg.createSVGPoint();
+  svgPoint.x = point.x;
+  svgPoint.y = point.y;
+  const result = svgPoint.matrixTransform(matrix);
+  return { x: result.x, y: result.y };
+}
+function samplePath(path) {
+  const length = path.getTotalLength();
+  if (!length) return [];
+  const matrix = path.getCTM();
+  const steps = Math.max(2, Math.ceil(length / 0.65));
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    points.push(mapPoint(path.getPointAtLength(length * i / steps), matrix));
   }
-  const mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
-  mask.id = `mask-${crypto.randomUUID()}`;
-  mask.setAttribute("maskUnits", "userSpaceOnUse");
-  mask.setAttribute("maskContentUnits", "userSpaceOnUse");
-  mask.setAttribute("mask-type", "luminance");
-  mask.setAttribute("x", "0");
-  mask.setAttribute("y", "0");
-  mask.setAttribute("width", s.w);
-  mask.setAttribute("height", s.h);
-  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  rect.setAttribute("width", s.w);
-  rect.setAttribute("height", s.h);
-  rect.setAttribute("fill", "white");
-  mask.append(rect);
-  defsEl.append(mask);
+  return points;
+}
+function pathPaint(path) {
+  const matrix = path.getCTM();
+  if (path.dataset.vectorized === "true") {
+    return [{
+      color: path.getAttribute("fill"),
+      polygons: pathDToPolygons(path.getAttribute("d") || "")
+        .map((polygon) => polygon.map((point) => mapPoint(point, matrix))),
+    }];
+  }
+  const points = samplePath(path);
+  const paint = [];
+  const fill = path.getAttribute("fill");
+  const stroke = path.getAttribute("stroke");
+  if (fill && fill !== "none" && points.length >= 3) {
+    paint.push({ color: fill, polygons: [points] });
+  }
+  if (stroke && stroke !== "none" && points.length) {
+    paint.push({
+      color: stroke,
+      polygons: roundStrokePolygon(points, Number(path.getAttribute("stroke-width") || 1)),
+    });
+  }
+  return paint;
+}
+function eraseSegment(points, width, layerId, scope = null) {
+  const eraser = roundStrokePolygon(points, width);
+  if (!eraser.length) return false;
+  const layer = scope || $(`#${CSS.escape(layerId)}`);
+  let changed = false;
+  for (const path of [...layer.querySelectorAll("path[data-draw-id]")]) {
+    const paint = pathPaint(path);
+    const pieces = paint.map(({ color, polygons }) => ({
+      color,
+      before: polygons,
+      after: subtractPolygons(polygons, eraser),
+    }));
+    if (!pieces.some(({ before, after }) =>
+      Math.abs(polygonArea(before) - polygonArea(after)) > 0.005)) continue;
 
-  // A máscara envolve somente os elementos que já existiam nesta passada.
-  // Novos traços ficam fora dela e podem repintar a área apagada.
-  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  group.setAttribute("mask", `url(#${mask.id})`);
-  const previousMask = layer.getAttribute("mask");
-  if (previousMask) {
-    const previousGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    previousGroup.setAttribute("mask", previousMask);
-    while (layer.firstChild) previousGroup.append(layer.firstChild);
-    group.append(previousGroup);
-    layer.removeAttribute("mask");
-    const info = layers.find((item) => item.id === layerId);
-    if (info) info.mask = "";
-  } else {
-    while (layer.firstChild) group.append(layer.firstChild);
+    const inverse = path.parentElement.getCTM().inverse();
+    for (const { color, after } of pieces) {
+      if (!after.length) continue;
+      const replacement = path.cloneNode(false);
+      replacement.dataset.drawId = crypto.randomUUID();
+      replacement.dataset.vectorized = "true";
+      replacement.removeAttribute("transform");
+      replacement.removeAttribute("vector-effect");
+      replacement.removeAttribute("stroke-width");
+      replacement.removeAttribute("stroke-linecap");
+      replacement.removeAttribute("stroke-linejoin");
+      replacement.setAttribute("fill", color);
+      replacement.setAttribute("fill-rule", "evenodd");
+      replacement.setAttribute("stroke", "none");
+      replacement.setAttribute("d", polygonsToPathD(after.map((polygon) =>
+        polygon.map((point) => mapPoint(point, inverse)))));
+      path.parentElement.insertBefore(replacement, path);
+    }
+    path.remove();
+    changed = true;
   }
-  layer.append(group);
-  return mask;
+  return changed;
+}
+function migrateLegacyMasks() {
+  const defsEl = $("#artboard-defs");
+  if (!defsEl) return;
+  for (const group of [...root.querySelectorAll("g[mask]")].reverse()) {
+    const id = group.getAttribute("mask")?.match(/^url\(#(.+)\)$/)?.[1];
+    const mask = id && defsEl.querySelector(`#${CSS.escape(id)}`);
+    if (!mask) continue;
+    for (const stroke of mask.querySelectorAll("path[data-type='eraser-stroke']")) {
+      const length = stroke.getTotalLength();
+      const steps = Math.max(1, Math.ceil(length / 0.65));
+      const points = [];
+      for (let i = 0; i <= steps; i++) {
+        const point = stroke.getPointAtLength(length * i / steps);
+        points.push({ x: point.x, y: point.y });
+      }
+      eraseSegment(points, Number(stroke.getAttribute("stroke-width") || 1), null, group);
+    }
+    group.removeAttribute("mask");
+    const info = layers.find((item) => item.id === group.id);
+    if (info) info.mask = "";
+    if (!info && !group.attributes.length) {
+      group.replaceWith(...group.childNodes);
+    }
+  }
+  defsEl.querySelectorAll("mask").forEach((mask) => mask.remove());
 }
 function clearSelection() {
   if (s.selection) {
@@ -409,11 +481,13 @@ function updateLayers() {
   }
 }
 function tool(t) {
+  if (t !== "select") clearSelection();
   s.tool = t;
   $$(".tool").forEach((b) =>
     b.classList.toggle("active", b.dataset.tool === t),
   );
   wrap.className = `canvas-wrap tool-${t}`;
+  if (t !== "eraser") eraserCursor.style.display = "none";
 }
 function pt(e) {
   let p = svg.createSVGPoint();
@@ -421,8 +495,24 @@ function pt(e) {
   p.y = e.clientY;
   return p.matrixTransform(svg.getScreenCTM().inverse());
 }
+const eraserCursor = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+eraserCursor.setAttribute("fill", "rgba(255,255,255,.25)");
+eraserCursor.setAttribute("stroke", "#18181b");
+eraserCursor.setAttribute("stroke-width", "1");
+eraserCursor.style.pointerEvents = "none";
+eraserCursor.style.display = "none";
+svg.append(eraserCursor);
+function updateEraserCursor(e) {
+  if (s.tool !== "eraser") return;
+  const point = pt(e);
+  eraserCursor.setAttribute("cx", point.x);
+  eraserCursor.setAttribute("cy", point.y);
+  eraserCursor.setAttribute("r", s.width / 2);
+  eraserCursor.style.display = "";
+}
+svg.addEventListener("pointerleave", () => { eraserCursor.style.display = "none"; });
 svg.addEventListener("pointerdown", (e) => {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || s.pointerId !== null) return;
   let target = e.target.closest("[data-draw-id]"),
     targetLayer =
       target && layers.find((l) => l.id === target.closest("#layers-root > g")?.id),
@@ -459,22 +549,13 @@ svg.addEventListener("pointerdown", (e) => {
   }
 
   if (s.tool === "eraser") {
-    const mask = createEraserMask(s.active);
-    if (!mask) return;
-
     s.drawing = true;
     s.pointerId = e.pointerId;
+    s.strokeTool = "eraser";
+    s.erased = false;
     s.points = [pt(e)];
-    let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    p.dataset.type = "eraser-stroke";
-    p.setAttribute("d", eraserPathD(s.points));
-    p.setAttribute("fill", "none");
-    p.setAttribute("stroke", "black");
-    p.setAttribute("stroke-width", s.width);
-    p.setAttribute("stroke-linecap", "round");
-    p.setAttribute("stroke-linejoin", "round");
-    s.path = p;
-    mask.append(p);
+    s.erased = eraseSegment(s.points, s.width, s.active);
+    if (s.erased) { refreshCode(); empty(); }
     svg.setPointerCapture(e.pointerId);
     return;
   }
@@ -537,6 +618,7 @@ svg.addEventListener("pointerdown", (e) => {
 
   s.drawing = true;
   s.pointerId = e.pointerId;
+  s.strokeTool = "brush";
   s.points = [pt(e)];
   let p = document.createElementNS("http://www.w3.org/2000/svg", "path");
   p.dataset.drawId = crypto.randomUUID();
@@ -552,6 +634,7 @@ svg.addEventListener("pointerdown", (e) => {
   svg.setPointerCapture(e.pointerId);
 });
 svg.addEventListener("pointermove", (e) => {
+  updateEraserCursor(e);
   if (s.pointerId !== null && e.pointerId !== s.pointerId) return;
   if (s.selection && s.selection.start && s.selection.elements?.length) {
     let p = pt(e),
@@ -573,19 +656,20 @@ svg.addEventListener("pointermove", (e) => {
     const q = s.points.at(-1);
     if (!q || Math.hypot(p.x - q.x, p.y - q.y) >= 0.8) {
       s.points.push(p);
+      if (s.strokeTool === "eraser") {
+        s.erased = eraseSegment([q, p], s.width, s.active) || s.erased;
+      }
     }
   }
-  s.path.setAttribute("d", s.tool === "eraser" ? eraserPathD(s.points) : pointsToPathD(s.points, false, 1));
-  refreshCode();
-  empty();
-});
-function eraserPathD(points) {
-  if (points.length === 1) {
-    const { x, y } = points[0];
-    return `M ${x.toFixed(2)} ${y.toFixed(2)} L ${(x + 0.01).toFixed(2)} ${y.toFixed(2)}`;
+  if (s.strokeTool === "brush") {
+    s.path.setAttribute("d", pointsToPathD(s.points, false, 1));
+    refreshCode();
+    empty();
+  } else if (s.erased) {
+    refreshCode();
+    empty();
   }
-  return pointsToPathD(points, false, 1);
-}
+});
 function finish(e) {
   if (e && s.pointerId !== null && e.pointerId !== s.pointerId) return;
   s.pointerId = null;
@@ -599,19 +683,30 @@ function finish(e) {
   }
   if (!s.drawing) return;
   s.drawing = false;
+  if (s.strokeTool === "eraser") {
+    if (s.erased) {
+      trackEvent("eraser_stroke_completed", {
+        tool: "eraser", layer_id: s.active, points_count: s.points.length,
+      });
+      saveHistory();
+      empty();
+    }
+    s.strokeTool = null;
+    return;
+  }
   if (s.path) {
-    const isEraser = s.tool === "eraser";
-    const closed = isEraser ? false : isPathClosed(s.points, s.width);
+    const closed = isPathClosed(s.points, s.width);
     const epsilon = Math.max(0.6, s.width * 0.12);
     const simplified = simplifyRDP(s.points, epsilon);
-    s.path.setAttribute("d", isEraser ? eraserPathD(simplified) : pointsToPathD(simplified, closed, 1));
-    trackEvent(isEraser ? "eraser_stroke_completed" : "stroke_completed", {
-      tool: s.tool,
+    s.path.setAttribute("d", pointsToPathD(simplified, closed, 1));
+    trackEvent("stroke_completed", {
+      tool: "brush",
       layer_id: s.active,
       points_count: simplified.length,
       raw_points: s.points.length,
     });
     s.path = null;
+    s.strokeTool = null;
     saveHistory();
     empty();
   }
