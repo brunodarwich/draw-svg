@@ -5,8 +5,8 @@ window.__TASKS_DATA__ = {
     "version": "1.0.0",
     "last_updated": "2026-09-26",
     "metrics": {
-      "total_tasks": 9,
-      "completed_tasks": 9,
+      "total_tasks": 10,
+      "completed_tasks": 10,
       "progress_percentage": 100
     }
   },
@@ -177,6 +177,25 @@ window.__TASKS_DATA__ = {
       "audit_confirmed": true,
       "created_at": "2026-09-26",
       "completed_at": "2026-09-26"
+    },
+    {
+      "id": "TASK-010",
+      "title": "Borracha Vetorial Híbrida Profissional (Fatia e Traço Todo)",
+      "description": "Engine híbrida de fatiamento de traços abertos preservando atributos vetoriais puros (stroke, stroke-width e pontas arredondadas), eliminação de bloat de SVG (redução de 34KB para <0.5KB), subtração com RDP em áreas preenchidas, alternância de modos Fatia vs Traço Todo na interface e atalho dinâmico E.",
+      "status": "done",
+      "milestone": "m4_frontend_ui",
+      "tier": "tier3_reviewer",
+      "indicators": [
+        "Fatiamento de traços abertos preserva a semântica vetorial pura e pontas redondas naturais",
+        "Arquivo SVG permanece leve (< 0.5 KB) sem inflar milhares de coordenadas",
+        "Modo Traço Todo remove elementos instantaneamente ao toque",
+        "Compatibilidade total com o balde de tinta e histórico desfazer/refazer",
+        "15 testes automatizados aprovados e build Vite de produção validado"
+      ],
+      "audit_confirmed": true,
+      "created_at": "2026-09-26",
+      "completed_at": "2026-09-26"
     }
   ]
-};
+}
+;

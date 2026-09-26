@@ -35,11 +35,13 @@ import {
   ExternalLink,
   Trash,
   Pencil,
+  Scissors,
 } from "lucide";
 import {
   pointsToPathD,
   simplifyRDP,
   isPathClosed,
+  distance,
 } from "./engine/geometry.js";
 import {
   serializeSvg,
@@ -52,6 +54,9 @@ import {
   polygonsToPathD,
   pathDToPolygons,
   polygonArea,
+  sliceStrokePoints,
+  simplifyPolygonRings,
+  pointToSegmentDistance,
 } from "./engine/vectorEraser.js";
 import { trackEvent } from "./engine/telemetry.js";
 const $ = (s) => document.querySelector(s),
@@ -59,6 +64,7 @@ const $ = (s) => document.querySelector(s),
 const iconSet = {
   Brush,
   Eraser,
+  Scissors,
   PaintBucket,
   MousePointer2,
   Undo2,
@@ -116,6 +122,7 @@ const s = {
   pointerId: null,
   strokeTool: null,
   erased: false,
+  eraserMode: "slice",
   selection: null,
   active: "layer-1",
   history: [],
@@ -206,6 +213,15 @@ function refreshCode() {
   $("#file-size").textContent = `${analysis.sizeKb} KB`;
   $("#line-numbers").textContent = analysis.lines.map((_, i) => i + 1).join("\n");
   $("#svg-code").textContent = xml;
+}
+let refreshPending = false;
+function requestRefreshCode() {
+  if (refreshPending) return;
+  refreshPending = true;
+  requestAnimationFrame(() => {
+    refreshCode();
+    refreshPending = false;
+  });
 }
 function empty() {
   $("#empty-hint").classList.toggle(
@@ -313,11 +329,22 @@ function mapPoint(point, matrix) {
   const result = svgPoint.matrixTransform(matrix);
   return { x: result.x, y: result.y };
 }
+function getPathToSvgMatrix(element) {
+  try {
+    const svgScreen = svg.getScreenCTM();
+    const elScreen = element.getScreenCTM();
+    if (svgScreen && elScreen) {
+      return svgScreen.inverse().multiply(elScreen);
+    }
+  } catch {}
+  return svg.createSVGMatrix();
+}
 function samplePath(path) {
   const length = path.getTotalLength();
   if (!length) return [];
-  const matrix = path.getCTM();
-  const steps = Math.max(2, Math.ceil(length / 0.65));
+  const matrix = getPathToSvgMatrix(path);
+  const step = Math.max(0.8, Math.min(2.0, length / 300));
+  const steps = Math.max(2, Math.ceil(length / step));
   const points = [];
   for (let i = 0; i <= steps; i++) {
     points.push(mapPoint(path.getPointAtLength(length * i / steps), matrix));
@@ -325,7 +352,7 @@ function samplePath(path) {
   return points;
 }
 function pathPaint(path) {
-  const matrix = path.getCTM();
+  const matrix = getPathToSvgMatrix(path);
   if (path.dataset.vectorized === "true") {
     return [{
       color: path.getAttribute("fill"),
@@ -349,41 +376,150 @@ function pathPaint(path) {
   return paint;
 }
 function eraseSegment(points, width, layerId, scope = null) {
-  const eraser = roundStrokePolygon(points, width);
-  if (!eraser.length) return false;
+  if (!points || !points.length || width <= 0) return false;
   const layer = scope || $(`#${CSS.escape(layerId)}`);
-  let changed = false;
-  for (const path of [...layer.querySelectorAll("path[data-draw-id]")]) {
-    const paint = pathPaint(path);
-    const pieces = paint.map(({ color, polygons }) => ({
-      color,
-      before: polygons,
-      after: subtractPolygons(polygons, eraser),
-    }));
-    if (!pieces.some(({ before, after }) =>
-      Math.abs(polygonArea(before) - polygonArea(after)) > 0.005)) continue;
+  if (!layer) return false;
 
-    const inverse = path.parentElement.getCTM().inverse();
-    for (const { color, after } of pieces) {
-      if (!after.length) continue;
-      const replacement = path.cloneNode(false);
-      replacement.dataset.drawId = crypto.randomUUID();
-      replacement.dataset.vectorized = "true";
-      replacement.removeAttribute("transform");
-      replacement.removeAttribute("vector-effect");
-      replacement.removeAttribute("stroke-width");
-      replacement.removeAttribute("stroke-linecap");
-      replacement.removeAttribute("stroke-linejoin");
-      replacement.setAttribute("fill", color);
-      replacement.setAttribute("fill-rule", "evenodd");
-      replacement.setAttribute("stroke", "none");
-      replacement.setAttribute("d", polygonsToPathD(after.map((polygon) =>
-        polygon.map((point) => mapPoint(point, inverse)))));
-      path.parentElement.insertBefore(replacement, path);
-    }
-    path.remove();
-    changed = true;
+  const eraserRadius = width / 2;
+  let changed = false;
+
+  let eMinX = Infinity, eMinY = Infinity, eMaxX = -Infinity, eMaxY = -Infinity;
+  for (const p of points) {
+    if (p.x < eMinX) eMinX = p.x;
+    if (p.y < eMinY) eMinY = p.y;
+    if (p.x > eMaxX) eMaxX = p.x;
+    if (p.y > eMaxY) eMaxY = p.y;
   }
+
+  for (const path of [...layer.querySelectorAll("path[data-draw-id]")]) {
+    const fill = path.getAttribute("fill");
+    const stroke = path.getAttribute("stroke");
+    const strokeWidth = Number(path.getAttribute("stroke-width") || 1);
+    const isOpenStroke = (!fill || fill === "none") && stroke && stroke !== "none";
+
+    let bbox;
+    try {
+      const b = path.getBBox();
+      const m = getPathToSvgMatrix(path);
+      const p1 = mapPoint({ x: b.x, y: b.y }, m);
+      const p2 = mapPoint({ x: b.x + b.width, y: b.y }, m);
+      const p3 = mapPoint({ x: b.x, y: b.y + b.height }, m);
+      const p4 = mapPoint({ x: b.x + b.width, y: b.y + b.height }, m);
+      const minX = Math.min(p1.x, p2.x, p3.x, p4.x);
+      const maxX = Math.max(p1.x, p2.x, p3.x, p4.x);
+      const minY = Math.min(p1.y, p2.y, p3.y, p4.y);
+      const maxY = Math.max(p1.y, p2.y, p3.y, p4.y);
+      bbox = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    } catch {
+      continue;
+    }
+    const padding = eraserRadius + (isOpenStroke ? strokeWidth : 0);
+    if (
+      eMaxX < bbox.x - padding ||
+      eMinX > bbox.x + bbox.width + padding ||
+      eMaxY < bbox.y - padding ||
+      eMinY > bbox.y + bbox.height + padding
+    ) {
+      continue;
+    }
+
+    if (s.eraserMode === "stroke") {
+      const sampled = samplePath(path);
+      const touched = sampled.some((p) => {
+        if (points.length === 1) return distance(p, points[0]) <= eraserRadius + (strokeWidth / 2);
+        for (let j = 0; j < points.length - 1; j++) {
+          if (pointToSegmentDistance(p, points[j], points[j + 1]) <= eraserRadius + (strokeWidth / 2)) {
+            return true;
+          }
+        }
+        return false;
+      });
+      if (touched) {
+        path.remove();
+        changed = true;
+      }
+      continue;
+    }
+
+    if (isOpenStroke) {
+      const sampledPoints = samplePath(path);
+      if (sampledPoints.length < 2) {
+        path.remove();
+        changed = true;
+        continue;
+      }
+
+      const pieces = sliceStrokePoints(sampledPoints, points, eraserRadius, strokeWidth);
+
+      if (pieces.length === 1 && pieces[0].length === sampledPoints.length) {
+        continue;
+      }
+
+      const parent = path.parentElement;
+      const inverse = getPathToSvgMatrix(parent).inverse();
+
+      for (const piece of pieces) {
+        if (piece.length < 2) continue;
+        const simplified = simplifyRDP(piece, 0.6);
+        const mapped = simplified.map((pt) => mapPoint(pt, inverse));
+        const d = pointsToPathD(mapped, false, 1);
+        if (!d) continue;
+
+        const replacement = path.cloneNode(false);
+        replacement.dataset.drawId = crypto.randomUUID();
+        replacement.removeAttribute("data-vectorized");
+        replacement.setAttribute("d", d);
+        replacement.setAttribute("fill", "none");
+        replacement.setAttribute("stroke", stroke);
+        replacement.setAttribute("stroke-width", strokeWidth);
+        replacement.setAttribute("stroke-linecap", "round");
+        replacement.setAttribute("stroke-linejoin", "round");
+        replacement.setAttribute("vector-effect", "non-scaling-stroke");
+        parent.insertBefore(replacement, path);
+      }
+
+      path.remove();
+      changed = true;
+    } else {
+      const eraser = roundStrokePolygon(points, width);
+      if (!eraser.length) continue;
+
+      const paint = pathPaint(path);
+      const pieces = paint.map(({ color, polygons }) => ({
+        color,
+        before: polygons,
+        after: subtractPolygons(polygons, eraser, true),
+      }));
+
+      if (!pieces.some(({ before, after }) =>
+        Math.abs(polygonArea(before) - polygonArea(after)) > 0.005)) continue;
+
+      const parent = path.parentElement;
+      const inverse = getPathToSvgMatrix(parent).inverse();
+
+      for (const { color, after } of pieces) {
+        if (!after.length) continue;
+        const replacement = path.cloneNode(false);
+        replacement.dataset.drawId = crypto.randomUUID();
+        replacement.dataset.vectorized = "true";
+        replacement.removeAttribute("transform");
+        replacement.removeAttribute("vector-effect");
+        replacement.removeAttribute("stroke-width");
+        replacement.removeAttribute("stroke-linecap");
+        replacement.removeAttribute("stroke-linejoin");
+        replacement.setAttribute("fill", color);
+        replacement.setAttribute("fill-rule", "evenodd");
+        replacement.setAttribute("stroke", "none");
+        replacement.setAttribute("d", polygonsToPathD(after.map((polygon) =>
+          polygon.map((point) => mapPoint(point, inverse)))));
+        parent.insertBefore(replacement, path);
+      }
+
+      path.remove();
+      changed = true;
+    }
+  }
+
   return changed;
 }
 function migrateLegacyMasks() {
@@ -488,6 +624,17 @@ function tool(t) {
   );
   wrap.className = `canvas-wrap tool-${t}`;
   if (t !== "eraser") eraserCursor.style.display = "none";
+  const eraserModeGroup = $("#eraser-mode-group");
+  if (eraserModeGroup) {
+    eraserModeGroup.style.display = t === "eraser" ? "flex" : "none";
+  }
+}
+function setEraserMode(mode) {
+  s.eraserMode = mode;
+  $("#eraser-mode-slice")?.classList.toggle("active", mode === "slice");
+  $("#eraser-mode-stroke")?.classList.toggle("active", mode === "stroke");
+  toast(mode === "slice" ? "Borracha: Modo Fatia / Precisão" : "Borracha: Modo Traço Inteiro");
+  trackEvent("eraser_mode_changed", { mode });
 }
 function pt(e) {
   let p = svg.createSVGPoint();
@@ -496,9 +643,9 @@ function pt(e) {
   return p.matrixTransform(svg.getScreenCTM().inverse());
 }
 const eraserCursor = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-eraserCursor.setAttribute("fill", "rgba(255,255,255,.25)");
-eraserCursor.setAttribute("stroke", "#18181b");
-eraserCursor.setAttribute("stroke-width", "1");
+eraserCursor.setAttribute("fill", "rgba(56, 189, 248, 0.15)");
+eraserCursor.setAttribute("stroke", "#38bdf8");
+eraserCursor.setAttribute("stroke-width", "1.5");
 eraserCursor.style.pointerEvents = "none";
 eraserCursor.style.display = "none";
 svg.append(eraserCursor);
@@ -555,7 +702,7 @@ svg.addEventListener("pointerdown", (e) => {
     s.erased = false;
     s.points = [pt(e)];
     s.erased = eraseSegment(s.points, s.width, s.active);
-    if (s.erased) { refreshCode(); empty(); }
+    if (s.erased) { requestRefreshCode(); empty(); }
     svg.setPointerCapture(e.pointerId);
     return;
   }
@@ -663,10 +810,10 @@ svg.addEventListener("pointermove", (e) => {
   }
   if (s.strokeTool === "brush") {
     s.path.setAttribute("d", pointsToPathD(s.points, false, 1));
-    refreshCode();
+    requestRefreshCode();
     empty();
   } else if (s.erased) {
-    refreshCode();
+    requestRefreshCode();
     empty();
   }
 });
@@ -686,9 +833,10 @@ function finish(e) {
   if (s.strokeTool === "eraser") {
     if (s.erased) {
       trackEvent("eraser_stroke_completed", {
-        tool: "eraser", layer_id: s.active, points_count: s.points.length,
+        tool: "eraser", mode: s.eraserMode, layer_id: s.active, points_count: s.points.length,
       });
       saveHistory();
+      refreshCode();
       empty();
     }
     s.strokeTool = null;
@@ -714,6 +862,8 @@ function finish(e) {
 svg.addEventListener("pointerup", finish);
 svg.addEventListener("pointercancel", finish);
 $$(".tool").forEach((b) => (b.onclick = () => tool(b.dataset.tool)));
+$("#eraser-mode-slice")?.addEventListener("click", () => setEraserMode("slice"));
+$("#eraser-mode-stroke")?.addEventListener("click", () => setEraserMode("stroke"));
 $$(".swatch").forEach(
   (b) =>
     (b.onclick = () => {
@@ -1185,7 +1335,13 @@ document.onkeydown = (e) => {
   } else if (!e.ctrlKey && !e.metaKey) {
     let k = e.key.toLowerCase();
     if (k === "b") tool("brush");
-    if (k === "e") tool("eraser");
+    if (k === "e") {
+      if (s.tool === "eraser") {
+        setEraserMode(s.eraserMode === "slice" ? "stroke" : "slice");
+      } else {
+        tool("eraser");
+      }
+    }
     if (k === "g") tool("fill");
     if (k === "v") tool("select");
   }

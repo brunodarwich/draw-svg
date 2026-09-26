@@ -191,6 +191,58 @@ select:focus-visible {
   min-width: 55px;
   font-size: 13px;
 }
+.eraser-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--panel, #18181b);
+  border: 1px solid var(--border, #27272a);
+  border-radius: 9px;
+  padding: 3px 6px;
+  height: 38px;
+  animation: modeFadeIn 0.15s ease-out;
+}
+.eraser-mode-group .mode-label {
+  font-size: 11px;
+  color: #71717a;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+}
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mode-pill:hover {
+  background: #27272a;
+  color: #f4f4f5;
+}
+.mode-pill.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+.mode-pill svg {
+  width: 14px;
+  height: 14px;
+}
+@keyframes modeFadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .top-actions {
   margin-left: auto;
   display: flex;

@@ -1,4 +1,5 @@
 import ClipperLib from "clipper-lib";
+import { distance, simplifyRDP, roundCoord } from "./geometry.js";
 
 const SCALE = 100;
 const toClipper = (paths) => paths.map((path) =>
@@ -7,6 +8,74 @@ const toClipper = (paths) => paths.map((path) =>
 const fromClipper = (paths) => paths.map((path) =>
   path.map(({ X, Y }) => ({ x: X / SCALE, y: Y / SCALE })),
 );
+
+/**
+ * Calcula a distância perpendicular mínima de um ponto p a um segmento de reta a -> b.
+ */
+export function pointToSegmentDistance(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  if (l2 === 0) return distance(p, a);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projX = a.x + t * dx;
+  const projY = a.y + t * dy;
+  return Math.hypot(p.x - projX, p.y - projY);
+}
+
+/**
+ * Fatiamento inteligente de traços abertos (Centerline Splitting).
+ * Divide a linha central em sub-traços contínuos onde a borracha não passou,
+ * preservando a semântica vetorial (stroke), pontas arredondadas e peso mínimo em bytes.
+ *
+ * @param {Array<{x: number, y: number}>} points - Pontos da linha central do traço.
+ * @param {Array<{x: number, y: number}>} eraserPoints - Pontos do caminho da borracha.
+ * @param {number} eraserRadius - Raio da borracha (width / 2).
+ * @param {number} strokeWidth - Espessura do traço original.
+ * @returns {Array<Array<{x: number, y: number}>>} Lista de segmentos contínuos sobreviventes.
+ */
+export function sliceStrokePoints(points, eraserPoints, eraserRadius, strokeWidth = 1) {
+  if (!points || points.length < 2) return [];
+  if (!eraserPoints || !eraserPoints.length) return [points];
+
+  const threshold = eraserRadius + (strokeWidth / 2);
+  const kept = new Array(points.length).fill(true);
+
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (eraserPoints.length === 1) {
+      if (distance(p, eraserPoints[0]) <= threshold) {
+        kept[i] = false;
+      }
+    } else {
+      for (let j = 0; j < eraserPoints.length - 1; j++) {
+        if (pointToSegmentDistance(p, eraserPoints[j], eraserPoints[j + 1]) <= threshold) {
+          kept[i] = false;
+          break;
+        }
+      }
+    }
+  }
+
+  const runs = [];
+  let currentRun = [];
+  for (let i = 0; i < points.length; i++) {
+    if (kept[i]) {
+      currentRun.push(points[i]);
+    } else {
+      if (currentRun.length >= 2) {
+        runs.push(currentRun);
+      }
+      currentRun = [];
+    }
+  }
+  if (currentRun.length >= 2) {
+    runs.push(currentRun);
+  }
+
+  return runs;
+}
 
 /** Turns a brush or eraser centre line into its actual painted area. */
 export function roundStrokePolygon(points, width) {
@@ -20,8 +89,25 @@ export function roundStrokePolygon(points, width) {
   return fromClipper(result);
 }
 
+/**
+ * Simplifica os anéis de polígonos fechados resultantes de operações booleanas,
+ * impedindo o inchaço de coordenadas microscópicas.
+ */
+export function simplifyPolygonRings(paths, epsilon = 0.6) {
+  if (!paths || !paths.length) return [];
+  return paths.map((ring) => {
+    if (ring.length <= 4) return ring;
+    const closed = [...ring, ring[0]];
+    const simplified = simplifyRDP(closed, epsilon);
+    if (simplified.length > 2 && distance(simplified[0], simplified[simplified.length - 1]) < 0.05) {
+      simplified.pop();
+    }
+    return simplified.length >= 3 ? simplified : ring;
+  });
+}
+
 /** Subtracts the eraser area from filled vector geometry, including holes. */
-export function subtractPolygons(subject, eraser) {
+export function subtractPolygons(subject, eraser, simplify = false) {
   if (!subject.length || !eraser.length) return subject;
   const clipper = new ClipperLib.Clipper();
   clipper.AddPaths(toClipper(subject), ClipperLib.PolyType.ptSubject, true);
@@ -33,7 +119,8 @@ export function subtractPolygons(subject, eraser) {
     ClipperLib.PolyFillType.pftEvenOdd,
     ClipperLib.PolyFillType.pftEvenOdd,
   );
-  return fromClipper(result);
+  const polygons = fromClipper(result);
+  return simplify ? simplifyPolygonRings(polygons, 0.6) : polygons;
 }
 
 export function polygonsToPathD(paths) {
